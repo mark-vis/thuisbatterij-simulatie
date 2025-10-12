@@ -1,17 +1,19 @@
-# Thuisbatterij Simulatie Website
+# Thuisbatterij Simulatie
 
-Web-based simulatie tool voor het berekenen van potentiële winsten door arbitrage handel met een thuisbatterij op de EPEX Day-Ahead markt.
+Web-based simulatietool voor het berekenen van potentiële winsten door batterijarbitage op de EPEX Day-Ahead markt.
+
+🔗 **Live demo:** https://mark-vis.github.io/thuisbatterij-simulatie/
 
 ## Features
 
 - ✅ 100% client-side (privacy vriendelijk - geen data naar server)
 - ✅ Simulatie voor jaren 2013-2025
-- ✅ Configureerbare batterij parameters (capaciteit, vermogen, efficiëntie)
-- ✅ Twee prijs modes (standaard met opslag, of simpel met alleen BTW)
-- ✅ Interactieve grafieken (Chart.js)
-- ✅ Maandelijks overzicht met tabel
+- ✅ Configureerbare batterijparameters (capaciteit, vermogen, efficiëntie, SoC limieten)
+- ✅ Drie prijs modes: Standaard (Tibber 2025), Kaal (EPEX zonder BTW), Geavanceerd (eigen formules)
+- ✅ Interactieve grafieken met Chart.js
+- ✅ Maandelijks overzicht met tabel en totalen
 - ✅ CSV export van resultaten
-- ✅ Responsive design (werkt op mobile)
+- ✅ Responsive design (werkt op mobiel en desktop)
 - ✅ Multiple pagina's (simulatie, technisch, over, disclaimer)
 
 ## Technologie
@@ -19,7 +21,7 @@ Web-based simulatie tool voor het berekenen van potentiële winsten door arbitra
 - **Frontend**: Vanilla JavaScript (geen frameworks)
 - **Charts**: Chart.js 4.4.0
 - **Optimizer**: MILP met HiGHS solver (WebAssembly)
-- **Data**: EPEX prijsdata van [jeroen.punt.nl](https://jeroen.punt.nl/)
+- **Data**: Historische EPEX prijsdata (2013-2025)
 
 ## Structuur
 
@@ -33,10 +35,11 @@ site/
 │   └── style.css           # Styling
 ├── js/
 │   ├── battery.js          # Battery class (charge/discharge)
-│   ├── optimizer.js        # Optimizer (greedy algorithm)
+│   ├── optimizer.js        # MILP optimizer (HiGHS solver)
 │   ├── simulator.js        # Main simulator logica
 │   ├── ui.js               # UI interactions & form handling
-│   └── charts.js           # Chart.js visualisaties
+│   ├── charts.js           # Chart.js visualisaties
+│   └── lib/                # HiGHS solver (WebAssembly)
 ├── data/
 │   ├── prices_2013.json    # EPEX prijzen per jaar
 │   ├── prices_2014.json
@@ -109,17 +112,19 @@ De simulator is gebaseerd op een Python implementatie en volledig herschreven in
 - [ ] PV productie integratie
 - [ ] Eigen verbruik profiel
 
-## Licentie
-
-MIT License (of naar wens)
-
 ## Contact
 
-[Voeg contact informatie toe]
+Ontwikkeld door **prof. Mark Vis**, universitair docent aan de TU/e.
+
+- Email: m.vis@tue.nl
+- Website: https://www.tue.nl/en/research/researchers/mark-vis
 
 ## Credits
 
-- EPEX prijsdata: [jeroen.punt.nl](https://jeroen.punt.nl/)
+- EPEX prijsdata: Met dank aan [jeroen.nl](https://jeroen.nl/) voor historische prijzen
 - Chart.js: https://www.chartjs.org/
 - HiGHS solver: [highs-js](https://github.com/lovasoa/highs-js)
-- Originele Python simulator: [link]
+
+## Licentie
+
+© Mark Vis - Deze software wordt aangeboden "as is", zonder enige garantie.
