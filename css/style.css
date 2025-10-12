@@ -116,8 +116,13 @@ nav h1 {
     border-radius: 12px;
     padding: 2rem;
     box-shadow: var(--shadow);
-    position: sticky;
-    top: 80px;
+}
+
+@media (min-width: 1025px) {
+    .simulation-form {
+        position: sticky;
+        top: 80px;
+    }
 }
 
 .form-section {
