@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technische Details - Thuisbatterij Simulatie</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1>⚡ Thuisbatterij Simulatie</h1>
+            <div class="nav-links">
+                <a href="index.html">Simulatie</a>
+                <a href="technical.html" class="active">Technisch</a>
+                <a href="about.html">Over</a>
+                <a href="legal.html">Disclaimer</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container content-page">
+        <h2>Technische Details</h2>
+
+        <section>
+            <h3>Hoe werkt de simulatie?</h3>
+            <p>De simulatie gebruikt een <strong>day-ahead optimization</strong> strategie:</p>
+            <ol>
+                <li>Elke dag om 13:00 worden de prijzen voor de komende 35 uur bekend</li>
+                <li>De optimizer berekent de optimale laad/ontlaad strategie voor deze periode</li>
+                <li>Deze strategie wordt uitgevoerd tot de volgende dag om 13:00, wanneer een nieuwe planning gemaakt wordt</li>
+            </ol>
+        </section>
+
+        <section>
+            <h3>Optimizer Algoritme</h3>
+            <p>De implementatie gebruikt <strong>MILP (Mixed Integer Linear Programming)</strong> met de HiGHS solver:</p>
+
+            <h4>Formulering</h4>
+            <ul>
+                <li><strong>Beslissingsvariabelen</strong>: Voor elke periode t:
+                    <ul>
+                        <li>charge[t] = DC energie naar batterij (kWh)</li>
+                        <li>discharge[t] = DC energie uit batterij (kWh)</li>
+                        <li>soc[t] = State of Charge aan eind van periode t (kWh)</li>
+                    </ul>
+                </li>
+                <li><strong>Objectieve functie</strong>: Maximaliseer winst
+                    <pre>profit = Σ[sell_price[t] × (discharge[t] × η_discharge) - buy_price[t] × (charge[t] / η_charge)]</pre>
+                </li>
+                <li><strong>Constraints</strong>:
+                    <ul>
+                        <li>SoC dynamica: soc[t] = soc[t-1] + charge[t] - discharge[t]</li>
+                        <li>Vermogen limieten: 0 ≤ charge[t] ≤ P_max, 0 ≤ discharge[t] ≤ P_max</li>
+                        <li>SoC limieten: SoC_min ≤ soc[t] ≤ SoC_max</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <p><strong>HiGHS solver</strong>: Professionele LP/MILP solver ontwikkeld door University of Edinburgh, gecompileerd naar WebAssembly voor browser gebruik.</p>
+            <p><em>Deze implementatie volgt exact dezelfde MILP formulering als de originele Python implementatie met PuLP.</em></p>
+        </section>
+
+        <section>
+            <h3>Efficienties</h3>
+            <p>De simulatie gebruikt <strong>DC power</strong> als basis:</p>
+            <ul>
+                <li><strong>Laden:</strong> AC van grid → omvormer → DC naar batterij</li>
+                <li><strong>Ontladen:</strong> DC uit batterij → omvormer → AC naar grid</li>
+            </ul>
+            <p>De totale efficiëntie is: <code>inverter_efficiency × battery_efficiency</code></p>
+        </section>
+
+        <section>
+            <h3>Prijzen</h3>
+            <p>De simulator ondersteunt drie prijs modes:</p>
+
+            <h4>1. Standaard (Tibber 2025)</h4>
+            <p>
+                Inkoop: <code>(EPEX + €0,10154) × 1,21 + €0,0248</code><br>
+                Teruglevering: <code>(EPEX + €0,10154) × 1,21 + €0,0248</code>
+            </p>
+            <p><small>EPEX is in EUR/kWh. Door saldering is inkoop = teruglevering. Formule bevat opslag (€0,10154/kWh), BTW (21%) en vaste kosten (€0,0248/kWh).</small></p>
+
+            <h4>2. Kaal (EPEX zonder BTW)</h4>
+            <p>
+                Inkoop: <code>EPEX</code><br>
+                Teruglevering: <code>EPEX</code>
+            </p>
+            <p><small>Puur EPEX day-ahead prijzen zonder toeslagen of BTW.</small></p>
+
+            <h4>3. Geavanceerd (eigen formules)</h4>
+            <p>Gebruikers kunnen eigen JavaScript formules invoeren voor inkoop en teruglevering prijzen. De variabele <code>epex</code> (in EUR/kWh) is beschikbaar.</p>
+        </section>
+
+        <section>
+            <h3>Cycles Berekening</h3>
+            <p>Aantal cycles wordt berekend als:</p>
+            <p><code>cycles = gemiddelde_doorvoer / capaciteit</code></p>
+            <p>Waarbij gemiddelde doorvoer = <code>(totaal_geladen + totaal_ontladen) / 2</code></p>
+            <p>Een volledige cyclus = 1× capaciteit laden + 1× capaciteit ontladen</p>
+        </section>
+
+        <section>
+            <h3>Beperkingen</h3>
+            <ul>
+                <li>Geen onbalans of intraday markten</li>
+                <li>Geen eigen verbruik of PV-productie</li>
+                <li>Vaste efficiency curves (geen variatie met vermogen)</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>Broncode</h3>
+            <p>Deze implementatie is gebaseerd op een Python simulator en is volledig herschreven in JavaScript voor client-side uitvoering.</p>
+            <p>Technologieën:
+            <ul>
+                <li>Vanilla JavaScript (geen frameworks)</li>
+                <li>HiGHS solver (WebAssembly) voor MILP optimalisatie</li>
+                <li>Chart.js voor visualisaties</li>
+                <li>100% client-side (privacy vriendelijk)</li>
+            </ul>
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; Mark Vis | Met dank aan <a href="https://jeroen.nl/" target="_blank">jeroen.nl</a> voor historische prijsdata</p>
+    </footer>
+</body>
+</html>

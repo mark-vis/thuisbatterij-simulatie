@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thuisbatterij Simulatie - EPEX Arbitrage</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <h1>⚡ Thuisbatterij Simulatie</h1>
+            <div class="nav-links">
+                <a href="index.html" class="active">Simulatie</a>
+                <a href="technical.html">Technisch</a>
+                <a href="about.html">Over</a>
+                <a href="legal.html">Disclaimer</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="intro">
+            <h2>EPEX Arbitrage Simulator</h2>
+            <p>Simuleer de winst van batterijarbitage op de EPEX day-ahead markt. Vul hieronder jouw batterijspecificaties in en selecteer een jaar om te simuleren.</p>
+        </section>
+
+        <div class="layout-two-column">
+        <section class="simulation-form">
+            <form id="simulationForm">
+                <div class="form-section">
+                    <div class="form-group-inline">
+                        <label for="year">Jaar:</label>
+                        <select id="year" required>
+                            <option value="2024" selected>2024</option>
+                            <option value="2025">2025 (t/m oktober)</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                            <option value="2019">2019</option>
+                            <option value="2018">2018</option>
+                            <option value="2017">2017</option>
+                            <option value="2016">2016</option>
+                            <option value="2015">2015</option>
+                            <option value="2014">2014</option>
+                            <option value="2013">2013</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Batterij Configuratie</h3>
+                    <div class="form-group-inline">
+                        <label for="capacity">Capaciteit (kWh):</label>
+                        <input type="number" id="capacity" min="1" max="100" step="0.1" value="32" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="initialSoc">Initiële SoC (%):</label>
+                        <input type="number" id="initialSoc" min="0" max="100" step="1" value="50" required>
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label for="chargePower">Laadvermogen (kW):</label>
+                        <input type="number" id="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="dischargePower">Ontlaadvermogen (kW):</label>
+                        <input type="number" id="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label for="chargeEff">Laadefficiëntie (%):</label>
+                        <input type="number" id="chargeEff" min="50" max="100" step="0.1" value="89" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="dischargeEff">Ontlaadefficiëntie (%):</label>
+                        <input type="number" id="dischargeEff" min="50" max="100" step="0.1" value="89" required>
+                    </div>
+
+                    <div class="form-group-inline">
+                        <label for="minSoc">Min SoC (%):</label>
+                        <input type="number" id="minSoc" min="0" max="100" step="1" value="0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="maxSoc">Max SoC (%):</label>
+                        <input type="number" id="maxSoc" min="0" max="100" step="1" value="100" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Prijzen</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="priceMode" value="standard" checked>
+                            Standaard (Tibber 2025)
+                        </label>
+                        <small class="formula-display">
+                            Inkoop: (EPEX + €0,10154) × 1,21 + €0,0248<br>
+                            Teruglevering: (EPEX + €0,10154) × 1,21 + €0,0248<br>
+                            (EPEX in EUR/kWh)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="priceMode" value="bare">
+                            Kaal (EPEX zonder BTW)
+                        </label>
+                        <small class="formula-display">
+                            Inkoop: EPEX<br>
+                            Teruglevering: EPEX<br>
+                            (EPEX in EUR/kWh)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="priceMode" value="custom">
+                            Geavanceerd (eigen formules)
+                        </label>
+                    </div>
+                    <div id="customFormulaInputs" style="display: none; margin-top: 1rem;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="customBuyFormula">Inkoop formule (JavaScript):</label>
+                                <input type="text" id="customBuyFormula" placeholder="epex => (epex + 0.10154) * 1.21 + 0.0248">
+                                <small>Variabele: epex (EUR/kWh), return EUR/kWh</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="customSellFormula">Teruglevering formule (JavaScript):</label>
+                                <input type="text" id="customSellFormula" placeholder="epex => (epex + 0.10154) * 1.21 + 0.0248">
+                                <small>Variabele: epex (EUR/kWh), return EUR/kWh</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="runButton">🚀 Start Simulatie</button>
+                </div>
+            </form>
+
+            <div id="progress" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressBar" class="progress-fill"></div>
+                </div>
+                <p id="progressText">Bezig met simuleren...</p>
+            </div>
+        </section>
+
+        <section id="results" class="results-section" style="display: none;">
+            <h2>Simulatie Resultaten</h2>
+
+            <div class="totals-summary">
+                <div class="total-card">
+                    <h3>Totale Winst</h3>
+                    <p class="total-value profit" id="totalProfit">€0.00</p>
+                </div>
+                <div class="total-card">
+                    <h3>Totaal Cycles</h3>
+                    <p class="total-value" id="totalCycles">0</p>
+                </div>
+                <div class="total-card">
+                    <h3>Winst per Cycle</h3>
+                    <p class="total-value" id="avgProfitPerCycle">€0.00</p>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-box">
+                    <h3>Maandelijkse Winst</h3>
+                    <canvas id="profitChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Cycles per Maand</h3>
+                    <canvas id="cyclesChart"></canvas>
+                </div>
+                <div class="chart-box full-width">
+                    <h3>Winst per Cycle</h3>
+                    <canvas id="profitPerCycleChart"></canvas>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3>Maandelijks Overzicht</h3>
+                <table id="monthlyTable">
+                    <thead>
+                        <tr>
+                            <th>Maand</th>
+                            <th>Winst (€)</th>
+                            <th>Cycles</th>
+                            <th>€/Cycle</th>
+                            <th>Laad</th>
+                            <th>Ontlaad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="export-actions">
+                <button id="exportCsvButton" class="btn-secondary">📥 Download CSV</button>
+            </div>
+        </section>
+        </div><!-- .layout-two-column -->
+    </main>
+
+    <footer>
+        <p>&copy; Mark Vis | Met dank aan <a href="https://jeroen.nl/" target="_blank">jeroen.nl</a> voor historische prijsdata</p>
+    </footer>
+
+    <!-- Load JavaScript modules -->
+    <!-- HiGHS MILP Solver -->
+    <script src="js/lib/highs.js"></script>
+
+    <script src="js/battery.js"></script>
+    <script src="js/optimizer.js"></script>
+    <script src="js/simulator.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>

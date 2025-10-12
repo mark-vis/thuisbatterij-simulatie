@@ -1,0 +1,20 @@
+{
+  "name": "site",
+  "version": "1.0.0",
+  "description": "Web-based simulatie tool voor het berekenen van potentiële winsten door arbitrage handel met een thuisbatterij op de EPEX Day-Ahead markt.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "highs": "^1.8.0",
+    "yalps": "^0.5.6"
+  }
+}
