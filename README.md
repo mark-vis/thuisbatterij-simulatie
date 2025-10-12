@@ -91,14 +91,14 @@ python convert_prices_to_json.py
 
 ## Ontwikkeling
 
-De simulator is gebaseerd op een Python implementatie en volledig herschreven in JavaScript.
+De simulator is gebaseerd op een niet-publieke Python implementatie en volledig herschreven in JavaScript.
 
-**Python versie:**
+**Python versie (niet publiek):**
 - Gebruikt PuLP voor MILP optimization
-- Day-ahead planning met perfecte foresight
+- Day-ahead planning
 - Detailed efficiency curves (Victron MultiPlus 5000)
 
-**JavaScript versie:**
+**JavaScript versie (deze repository):**
 - HiGHS solver voor MILP optimization (exact dezelfde formulering als Python)
 - Zelfde planning logica (day-ahead om 13:00)
 - Vaste efficiency percentages (geen curves)
@@ -106,18 +106,17 @@ De simulator is gebaseerd op een Python implementatie en volledig herschreven in
 ### Toekomstige Verbeteringen
 
 - [x] MILP solver (HiGHS via WebAssembly)
-- [ ] Efficiency curves (variabel per vermogen)
-- [ ] Intraday markt support
-- [ ] Batterij degradatie model
 - [ ] PV productie integratie
 - [ ] Eigen verbruik profiel
+- [ ] Efficiency curves (variabel per vermogen)
 
 ## Contact
 
 Ontwikkeld door **prof. Mark Vis**, universitair docent aan de TU/e.
 
+- **Live demo:** https://mark-vis.github.io/thuisbatterij-simulatie/
 - Email: m.vis@tue.nl
-- Website: https://www.tue.nl/en/research/researchers/mark-vis
+- TU/e profiel: https://www.tue.nl/en/research/researchers/mark-vis
 
 ## Credits
 
