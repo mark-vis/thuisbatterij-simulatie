@@ -48,12 +48,7 @@ class BatterySimulator {
         while (currentTime <= endDate) {
             // Get current price and determine time step
             const currentTs = currentTime.getTime();
-            const priceEurMwh = pricesMap.get(currentTs);
-
-            // If no price at current time, we've reached the end or hit a gap
-            if (priceEurMwh === undefined) {
-                break;
-            }
+            const priceEurMwh = pricesMap.get(currentTs) || 0;  // Fallback to 0 if no price
 
             // Auto-detect time step by looking ahead
             let timeStepMs = 60 * 60 * 1000;  // Default: 1 hour
