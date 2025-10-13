@@ -75,19 +75,22 @@ npx serve
 1. Connect repository
 2. Deploy (geen build stappen nodig)
 
-## Data Update
+## Data
 
-Om nieuwe prijsdata toe te voegen:
+De EPEX prijsdata is opgeslagen in JSON formaat in de `data/` directory. Elk bestand bevat de uurlijkse prijzen voor een specifiek jaar:
 
-1. Plaats nieuwe CSV in `../simulatie/data/`
-2. Run conversie script:
-
-```bash
-cd ../simulatie
-python convert_prices_to_json.py
+```json
+{
+  "year": 2024,
+  "prices": [
+    {"timestamp": "2024-01-01T00:00:00", "price": 45.23},
+    {"timestamp": "2024-01-01T01:00:00", "price": 42.18},
+    ...
+  ]
+}
 ```
 
-3. Nieuwe JSON files worden aangemaakt in `site/data/`
+Prijzen zijn in EUR/MWh. De simulator converteert deze intern naar EUR/kWh voor de berekeningen.
 
 ## Ontwikkeling
 
@@ -126,4 +129,6 @@ Ontwikkeld door **prof. Mark Vis**, universitair docent aan de TU/e.
 
 ## Licentie
 
-© Mark Vis - Deze software wordt aangeboden "as is", zonder enige garantie.
+© Mark Vis - Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+
+Deze software mag gebruikt worden voor niet-commerciële doeleinden. Voor commercieel gebruik, neem contact op met m.vis@tue.nl
