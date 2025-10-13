@@ -195,3 +195,179 @@ function createProfitPerCycleChart(labels, data) {
         }
     });
 }
+
+// Global timestep chart instance
+let timestepChart = null;
+
+/**
+ * Create timestep detail chart (combined SoC + profit + price)
+ */
+function createTimestepChart(timestepData) {
+    // Destroy existing chart
+    if (timestepChart) {
+        timestepChart.destroy();
+    }
+
+    const ctx = document.getElementById('timestepChart').getContext('2d');
+
+    // Prepare data
+    const labels = timestepData.map(d => {
+        const date = new Date(d.timestamp);
+        return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    });
+    const socData = timestepData.map(d => d.socPct);
+    const profitData = timestepData.map(d => d.profitEur);
+    const buyPriceData = timestepData.map(d => d.buyPriceEurKwh * 100);  // Convert to cents (EUR/kWh * 100)
+    const sellPriceData = timestepData.map(d => d.sellPriceEurKwh * 100);  // Convert to cents (EUR/kWh * 100)
+
+    // Check if buy and sell prices are different
+    const pricesAreDifferent = timestepData.some((d, i) =>
+        Math.abs(d.buyPriceEurKwh - d.sellPriceEurKwh) > 0.0001
+    );
+
+    // Background colors based on action (reversed: charge=red, discharge=green)
+    const actionColors = timestepData.map(d => {
+        if (d.action === 'charge') return 'rgba(255, 99, 132, 0.6)';  // Red for buying
+        if (d.action === 'discharge') return 'rgba(75, 192, 192, 0.6)';  // Green for selling
+        return 'rgba(200, 200, 200, 0.3)';
+    });
+
+    // Build datasets
+    const datasets = [
+        {
+            label: 'SoC (%)',
+            data: socData,
+            type: 'line',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1,
+            yAxisID: 'y',
+            order: 1
+        },
+        {
+            label: 'Inkoopprijs (ct/kWh)',
+            data: buyPriceData,
+            type: 'line',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            borderWidth: 2,
+            borderDash: pricesAreDifferent ? [] : [5, 5],
+            fill: false,
+            tension: 0.1,
+            yAxisID: 'y1',
+            order: 2
+        }
+    ];
+
+    // Add sell price line if different from buy price
+    if (pricesAreDifferent) {
+        datasets.push({
+            label: 'Verkoopprijs (ct/kWh)',
+            data: sellPriceData,
+            type: 'line',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1,
+            yAxisID: 'y1',
+            order: 2
+        });
+    }
+
+    datasets.push({
+        label: 'Winst (€)',
+        data: profitData,
+        backgroundColor: actionColors,
+        borderColor: actionColors.map(c => c.replace('0.6', '1')),
+        borderWidth: 1,
+        yAxisID: 'y2',
+        order: 3
+    });
+
+    timestepChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            if (label === 'SoC (%)') {
+                                return `${label}: ${value.toFixed(1)}%`;
+                            } else if (label.includes('prijs')) {
+                                return `${label}: ${value.toFixed(2)}ct`;
+                            } else if (label === 'Winst (€)') {
+                                return `${label}: €${value.toFixed(3)}`;
+                            }
+                            return `${label}: ${value}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'SoC (%)'
+                    },
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Prijs (ct/kWh)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Winst (€)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}

@@ -44,6 +44,7 @@ class BatterySimulator {
 
         let lastProgressUpdate = Date.now();
         const totalDuration = endDate - startDate;
+        let needsInitialPlan = true;  // Flag for first plan
 
         while (currentTime <= endDate) {
             // Get current price and determine time step
@@ -66,8 +67,15 @@ class BatterySimulator {
                 durationHours = 0.25;
             }
 
-            // Check if we need to make a new plan (at 13:00 each day)
-            if (currentTime.getHours() === 13 && currentTime.getMinutes() === 0) {
+            // Check if we need to make a new plan
+            // - Initial plan at start
+            // - Daily plan at 13:00, but only if we have at least 24 hours left
+            const hoursUntilEnd = (endDate - currentTime) / (60 * 60 * 1000);
+            const shouldMakePlan = needsInitialPlan ||
+                (currentTime.getHours() === 13 && currentTime.getMinutes() === 0 && hoursUntilEnd >= 24);
+
+            if (shouldMakePlan) {
+                needsInitialPlan = false;
                 // Planning window: from now until midnight of next day (35 hours)
                 const planStart = new Date(currentTime);
                 const planEnd = new Date(currentTime);
@@ -257,6 +265,108 @@ class BatterySimulator {
             totalCycles,
             avgProfitPerCycle
         };
+    }
+
+    /**
+     * Get daily summary for a specific month
+     * @param {string} monthKey - Month key (e.g., "2024-10")
+     * @returns {Array<Object>} Daily summary [{date, profitEur, cycles, chargeKwh, dischargeKwh, avgPrice, maxSoc, minSoc}, ...]
+     */
+    getDailySummary(monthKey) {
+        if (!this.history || this.history.length === 0) {
+            return [];
+        }
+
+        const [year, month] = monthKey.split('-').map(Number);
+
+        // Filter history for this month
+        const monthHistory = this.history.filter(row => {
+            const date = new Date(row.timestamp);
+            return date.getFullYear() === year && (date.getMonth() + 1) === month;
+        });
+
+        // Group by day
+        const dailyData = {};
+        for (const row of monthHistory) {
+            const date = new Date(row.timestamp);
+            const dayKey = `${year}-${String(month).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+            if (!dailyData[dayKey]) {
+                dailyData[dayKey] = {
+                    date: dayKey,
+                    profitEur: 0,
+                    chargeKwh: 0,
+                    dischargeKwh: 0,
+                    prices: [],
+                    socValues: []
+                };
+            }
+
+            dailyData[dayKey].profitEur += row.profitEur;
+            dailyData[dayKey].prices.push(row.priceEurMwh / 1000);  // Convert to EUR/kWh
+            dailyData[dayKey].socValues.push(row.socPct);
+
+            if (row.action === 'charge') {
+                dailyData[dayKey].chargeKwh += row.energyKwh;
+            } else if (row.action === 'discharge') {
+                dailyData[dayKey].dischargeKwh += row.energyKwh;
+            }
+        }
+
+        // Calculate summary metrics
+        const summary = [];
+        for (const [dayKey, data] of Object.entries(dailyData)) {
+            const avgThroughput = (data.chargeKwh + data.dischargeKwh) / 2;
+            const cycles = avgThroughput / this.batteryConfig.capacityKwh;
+            const avgPrice = data.prices.reduce((sum, p) => sum + p, 0) / data.prices.length;
+            const maxSoc = Math.max(...data.socValues);
+            const minSoc = Math.min(...data.socValues);
+
+            summary.push({
+                date: dayKey,
+                profitEur: data.profitEur,
+                cycles: cycles,
+                chargeKwh: data.chargeKwh,
+                dischargeKwh: data.dischargeKwh,
+                avgPrice: avgPrice,
+                maxSoc: maxSoc,
+                minSoc: minSoc
+            });
+        }
+
+        return summary.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    /**
+     * Get hourly/quarterly summary for a specific day
+     * @param {string} dateKey - Date key (e.g., "2024-10-15")
+     * @returns {Array<Object>} Timestep summary [{timestamp, action, energyKwh, socPct, priceEurKwh, profitEur}, ...]
+     */
+    getTimestepSummary(dateKey) {
+        if (!this.history || this.history.length === 0) {
+            return [];
+        }
+
+        const [year, month, day] = dateKey.split('-').map(Number);
+
+        // Filter history for this day
+        const dayHistory = this.history.filter(row => {
+            const date = new Date(row.timestamp);
+            return date.getFullYear() === year &&
+                   (date.getMonth() + 1) === month &&
+                   date.getDate() === day;
+        });
+
+        // Format for display
+        return dayHistory.map(row => ({
+            timestamp: row.timestamp,
+            action: row.action,
+            energyKwh: row.energyKwh,
+            socPct: row.socPct,
+            buyPriceEurKwh: row.buyPrice,  // Already in EUR/kWh
+            sellPriceEurKwh: row.sellPrice,  // Already in EUR/kWh
+            profitEur: row.profitEur
+        }));
     }
 
     /**

@@ -5,6 +5,8 @@
 // Global state
 let currentResults = null;
 let currentMonthlySummary = null;
+let currentSimulationHistory = null;  // Full timestep-by-timestep history
+let currentSimulator = null;  // Reference to simulator for aggregation functions
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -157,6 +159,8 @@ async function handleFormSubmit(event) {
         // Store results
         currentResults = results;
         currentMonthlySummary = monthlySummary;
+        currentSimulationHistory = results;  // Full history for drill-down
+        currentSimulator = simulator;  // Keep reference for aggregation
 
         // Display results
         updateProgress(100, 'Gereed!');
@@ -226,6 +230,8 @@ function displayResults(totals, monthlySummary) {
 
     for (const month of monthlySummary) {
         const row = document.createElement('tr');
+        row.className = 'clickable-row';
+        row.dataset.month = month.monthName;
         row.innerHTML = `
             <td>${month.monthName}</td>
             <td class="${month.profitEur >= 0 ? 'profit-positive' : 'profit-negative'}">
@@ -236,6 +242,7 @@ function displayResults(totals, monthlySummary) {
             <td>${month.chargePeriods}</td>
             <td>${month.dischargePeriods}</td>
         `;
+        row.onclick = () => showMonthDetail(month.monthName);
         tableBody.appendChild(row);
     }
 
@@ -282,4 +289,105 @@ function exportToCsv() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+/**
+ * Show month detail (daily view)
+ */
+function showMonthDetail(monthKey) {
+    if (!currentSimulator) {
+        return;
+    }
+
+    // Get daily summary for this month
+    const dailySummary = currentSimulator.getDailySummary(monthKey);
+
+    // Show detail view
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('detailView').style.display = 'block';
+    document.getElementById('detailTitle').textContent = `Details voor ${monthKey}`;
+    document.getElementById('dailyView').style.display = 'block';
+    document.getElementById('timestepView').style.display = 'none';
+    document.getElementById('dayNavigation').style.display = 'none';
+
+    // Populate daily table
+    const tableBody = document.getElementById('dailyTableBody');
+    tableBody.innerHTML = '';
+
+    for (const day of dailySummary) {
+        const row = document.createElement('tr');
+        row.className = 'clickable-row';
+        row.innerHTML = `
+            <td>${day.date}</td>
+            <td class="${day.profitEur >= 0 ? 'profit-positive' : 'profit-negative'}">
+                €${day.profitEur.toFixed(2)}
+            </td>
+            <td>${day.cycles.toFixed(2)}</td>
+            <td>€${day.avgPrice.toFixed(4)}</td>
+            <td>${day.minSoc.toFixed(0)}% - ${day.maxSoc.toFixed(0)}%</td>
+        `;
+        row.addEventListener('click', () => showDayDetail(day.date));
+        tableBody.appendChild(row);
+    }
+
+    // Setup back button
+    document.getElementById('closeDetail').onclick = closeDetailView;
+}
+
+/**
+ * Show day detail (timestep view)
+ */
+function showDayDetail(dateKey) {
+    if (!currentSimulator) {
+        return;
+    }
+
+    // Get timestep summary for this day
+    const timestepData = currentSimulator.getTimestepSummary(dateKey);
+
+    // Show timestep view
+    document.getElementById('detailTitle').textContent = `Details voor ${dateKey}`;
+    document.getElementById('dailyView').style.display = 'none';
+    document.getElementById('timestepView').style.display = 'block';
+
+    // Show day navigation
+    document.getElementById('dayNavigation').style.display = 'flex';
+
+    // Create chart
+    createTimestepChart(timestepData);
+
+    // Setup navigation buttons
+    const monthKey = dateKey.substring(0, 7);  // Extract "2024-10" from "2024-10-15"
+    const dailySummary = currentSimulator.getDailySummary(monthKey);
+    const currentIndex = dailySummary.findIndex(d => d.date === dateKey);
+
+    const prevBtn = document.getElementById('prevDay');
+    const nextBtn = document.getElementById('nextDay');
+
+    // Previous day
+    if (currentIndex > 0) {
+        prevBtn.disabled = false;
+        prevBtn.onclick = () => showDayDetail(dailySummary[currentIndex - 1].date);
+    } else {
+        prevBtn.disabled = true;
+    }
+
+    // Next day
+    if (currentIndex < dailySummary.length - 1) {
+        nextBtn.disabled = false;
+        nextBtn.onclick = () => showDayDetail(dailySummary[currentIndex + 1].date);
+    } else {
+        nextBtn.disabled = true;
+    }
+
+    // Update back button to go back to daily view
+    document.getElementById('closeDetail').onclick = () => showMonthDetail(monthKey);
+}
+
+/**
+ * Close detail view and return to main results
+ */
+function closeDetailView() {
+    document.getElementById('detailView').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
 }

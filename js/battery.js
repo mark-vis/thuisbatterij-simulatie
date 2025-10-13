@@ -21,10 +21,10 @@ class Battery {
 
     /**
      * Get State of Charge as percentage
-     * @returns {number} SoC percentage (0-1)
+     * @returns {number} SoC percentage (0-100)
      */
     get socPct() {
-        return this.socKwh / this.config.capacityKwh;
+        return (this.socKwh / this.config.capacityKwh) * 100;
     }
 
     /**

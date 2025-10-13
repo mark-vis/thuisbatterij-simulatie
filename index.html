@@ -206,6 +206,40 @@
                 <button id="exportCsvButton" class="btn-secondary">📥 Download CSV</button>
             </div>
         </section>
+
+        <!-- Detail view (hidden by default) -->
+        <section id="detailView" class="detail-view" style="display: none;">
+            <div class="detail-header">
+                <button id="closeDetail" class="btn-back">← Terug</button>
+                <h3 id="detailTitle"></h3>
+                <div class="detail-nav" id="dayNavigation" style="display: none;">
+                    <button id="prevDay" class="btn-nav">← Vorige dag</button>
+                    <button id="nextDay" class="btn-nav">Volgende dag →</button>
+                </div>
+            </div>
+            <div class="detail-content">
+                <!-- Day summary table -->
+                <div id="dailyView" class="table-container" style="display: none;">
+                    <table id="dailyTable">
+                        <thead>
+                            <tr>
+                                <th>Dag</th>
+                                <th>Winst (€)</th>
+                                <th>Cycles</th>
+                                <th>Gem. Prijs (€/kWh)</th>
+                                <th>SoC Min-Max (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailyTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Hourly/quarterly chart -->
+                <div id="timestepView" class="chart-box" style="display: none;">
+                    <canvas id="timestepChart"></canvas>
+                </div>
+            </div>
+        </section>
         </div><!-- .layout-two-column -->
     </main>
 
