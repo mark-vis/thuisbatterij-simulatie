@@ -41,23 +41,45 @@ class BatterySimulator {
         const endDate = new Date(Math.max(...timestamps.map(d => d.getTime())));
 
         let currentTime = new Date(startDate);
-        const resolution = 'hourly';  // Always hourly for now
-        const timeStepMs = 60 * 60 * 1000;  // 1 hour
-        const durationHours = 1.0;
 
         let lastProgressUpdate = Date.now();
         const totalDuration = endDate - startDate;
 
         while (currentTime <= endDate) {
+            // Get current price and determine time step
+            const currentTs = currentTime.getTime();
+            const priceEurMwh = pricesMap.get(currentTs);
+
+            // If no price at current time, we've reached the end or hit a gap
+            if (priceEurMwh === undefined) {
+                break;
+            }
+
+            // Auto-detect time step by looking ahead
+            let timeStepMs = 60 * 60 * 1000;  // Default: 1 hour
+            let resolution = 'hourly';
+            let durationHours = 1.0;
+
+            // Check next available timestamp to determine step size
+            const nextTs15min = currentTs + 15 * 60 * 1000;
+            const nextTs1hour = currentTs + 60 * 60 * 1000;
+
+            if (pricesMap.has(nextTs15min) && !pricesMap.has(nextTs1hour)) {
+                // Quarterly data
+                timeStepMs = 15 * 60 * 1000;
+                resolution = 'quarterly';
+                durationHours = 0.25;
+            }
+
             // Check if we need to make a new plan (at 13:00 each day)
-            if (currentTime.getHours() === 13) {
+            if (currentTime.getHours() === 13 && currentTime.getMinutes() === 0) {
                 // Planning window: from now until midnight of next day (35 hours)
                 const planStart = new Date(currentTime);
                 const planEnd = new Date(currentTime);
                 planEnd.setDate(planEnd.getDate() + 2);
                 planEnd.setHours(0, 0, 0, 0);
 
-                // Gather prices for planning window
+                // Gather prices for planning window (use current resolution)
                 const planPrices = [];
                 let checkTime = new Date(planStart);
                 while (checkTime < planEnd) {
@@ -96,10 +118,6 @@ class BatterySimulator {
                     await new Promise(resolve => setTimeout(resolve, 0));
                 }
             }
-
-            // Get current price
-            const currentTs = currentTime.getTime();
-            const priceEurMwh = pricesMap.get(currentTs) || 0;
 
             // Calculate buy/sell prices (using same formulas as optimizer)
             const buyPrice = this.optimizer.priceConfig.buyFormula(priceEurMwh);
