@@ -28,11 +28,23 @@ class BatterySimulator {
         this.history = [];
         this.currentPlan = null;
 
-        // Convert prices to Map for fast lookup
+        // Convert prices to Map for fast lookup (index-based to handle DST duplicates)
         const pricesMap = new Map();
-        for (const p of this.pricesData) {
+        const pricesByIndex = [];  // Keep original order for iteration
+
+        for (let i = 0; i < this.pricesData.length; i++) {
+            const p = this.pricesData[i];
             const ts = new Date(p.timestamp).getTime();
-            pricesMap.set(ts, p.price);
+
+            // For DST duplicates, store with index as secondary key
+            const key = `${ts}_${i}`;
+            pricesMap.set(ts, p.price);  // Latest duplicate wins, but we also use index-based lookup
+            pricesByIndex.push({
+                timestamp: ts,
+                price: p.price,
+                originalTimestamp: p.timestamp,
+                index: i
+            });
         }
 
         // Get start and end dates
@@ -41,29 +53,34 @@ class BatterySimulator {
         const endDate = new Date(Math.max(...timestamps.map(d => d.getTime())));
 
         let currentTime = new Date(startDate);
+        let priceIndex = 0;  // Track position in price array
 
         let lastProgressUpdate = Date.now();
         const totalDuration = endDate - startDate;
         let needsInitialPlan = true;  // Flag for first plan
 
-        while (currentTime <= endDate) {
-            // Get current price and determine time step
+        while (currentTime <= endDate && priceIndex < pricesByIndex.length) {
+            // Get current price using index-based lookup (handles DST duplicates correctly)
             const currentTs = currentTime.getTime();
-            const priceEurMwh = pricesMap.get(currentTs) || 0;  // Fallback to 0 if no price
+            const priceEntry = pricesByIndex[priceIndex];
+            const priceEurMwh = priceEntry.price;
 
             // Auto-detect time step by looking ahead
             let timeStepMs = 60 * 60 * 1000;  // Default: 1 hour
             let resolution = 'hourly';
             let durationHours = 1.0;
 
-            // Check next available timestamp to determine step size
-            const nextTs15min = currentTs + 15 * 60 * 1000;
+            // Check next entry to determine step size
+            if (priceIndex + 1 < pricesByIndex.length) {
+                const nextEntry = pricesByIndex[priceIndex + 1];
+                const timeDiff = nextEntry.timestamp - priceEntry.timestamp;
 
-            if (pricesMap.has(nextTs15min)) {
-                // Quarterly data (15-minute intervals)
-                timeStepMs = 15 * 60 * 1000;
-                resolution = 'quarterly';
-                durationHours = 0.25;
+                if (timeDiff <= 15 * 60 * 1000) {
+                    // Quarterly data (15-minute intervals)
+                    timeStepMs = 15 * 60 * 1000;
+                    resolution = 'quarterly';
+                    durationHours = 0.25;
+                }
             }
 
             // Check if we need to make a new plan
@@ -81,18 +98,26 @@ class BatterySimulator {
                 planEnd.setDate(planEnd.getDate() + 2);
                 planEnd.setHours(0, 0, 0, 0);
 
-                // Gather prices for planning window (use current resolution)
+                // Gather prices for planning window (use sequential lookup from current index)
                 const planPrices = [];
-                let checkTime = new Date(planStart);
-                while (checkTime < planEnd) {
-                    const ts = checkTime.getTime();
-                    if (pricesMap.has(ts)) {
+                let planIndex = priceIndex;
+
+                while (planIndex < pricesByIndex.length) {
+                    const entry = pricesByIndex[planIndex];
+                    const entryDate = new Date(entry.timestamp);
+
+                    if (entryDate >= planEnd) {
+                        break;
+                    }
+
+                    if (entryDate >= planStart) {
                         planPrices.push({
-                            timestamp: ts,
-                            price: pricesMap.get(ts)
+                            timestamp: entry.timestamp,
+                            price: entry.price
                         });
                     }
-                    checkTime = new Date(checkTime.getTime() + timeStepMs);
+
+                    planIndex++;
                 }
 
                 // Optimize (MILP - async operation)
@@ -171,6 +196,7 @@ class BatterySimulator {
 
             // Next timestep
             currentTime = new Date(currentTime.getTime() + timeStepMs);
+            priceIndex++;  // Move to next price entry
         }
 
         if (progressCallback) {
