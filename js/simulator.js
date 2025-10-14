@@ -48,21 +48,20 @@ class BatterySimulator {
         }
 
         // Get start and end dates
-        const timestamps = this.pricesData.map(p => new Date(p.timestamp));
-        const startDate = new Date(Math.min(...timestamps.map(d => d.getTime())));
-        const endDate = new Date(Math.max(...timestamps.map(d => d.getTime())));
+        const startDate = new Date(pricesByIndex[0].timestamp);
+        const endDate = new Date(pricesByIndex[pricesByIndex.length - 1].timestamp);
 
-        let currentTime = new Date(startDate);
         let priceIndex = 0;  // Track position in price array
 
         let lastProgressUpdate = Date.now();
         const totalDuration = endDate - startDate;
         let needsInitialPlan = true;  // Flag for first plan
 
-        while (currentTime <= endDate && priceIndex < pricesByIndex.length) {
-            // Get current price using index-based lookup (handles DST duplicates correctly)
-            const currentTs = currentTime.getTime();
+        while (priceIndex < pricesByIndex.length) {
+            // Get current price and time from price data (ensures sync with actual data)
             const priceEntry = pricesByIndex[priceIndex];
+            const currentTime = new Date(priceEntry.timestamp);
+            const currentTs = currentTime.getTime();
             const priceEurMwh = priceEntry.price;
 
             // Auto-detect time step by looking ahead
@@ -183,7 +182,7 @@ class BatterySimulator {
 
             // Record state
             this.history.push({
-                timestamp: new Date(currentTime),
+                timestamp: currentTime,
                 action: action,
                 energyKwh: energyKwh,
                 socKwh: this.battery.socKwh,
@@ -194,9 +193,8 @@ class BatterySimulator {
                 profitEur: profit
             });
 
-            // Next timestep
-            currentTime = new Date(currentTime.getTime() + timeStepMs);
-            priceIndex++;  // Move to next price entry
+            // Move to next price entry
+            priceIndex++;
         }
 
         if (progressCallback) {
