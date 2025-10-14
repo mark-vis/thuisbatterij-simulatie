@@ -293,9 +293,25 @@ button[type="submit"]:disabled {
 
 .totals-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
     margin-bottom: 3rem;
+}
+
+/* Better layout for medium screens (13" laptops) */
+@media (min-width: 769px) and (max-width: 1440px) {
+    .totals-summary {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    .total-card {
+        padding: 1.5rem;
+    }
+
+    .total-value {
+        font-size: 2rem;
+    }
 }
 
 .total-card {
