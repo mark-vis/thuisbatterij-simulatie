@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportButton = document.getElementById('exportCsvButton');
     exportButton.addEventListener('click', exportToCsv);
 
+    const shareButton = document.getElementById('shareUrlButton');
+    shareButton.addEventListener('click', copyShareUrl);
+
     // Handle custom formula toggle
     const priceModeRadios = document.querySelectorAll('input[name="priceMode"]');
     priceModeRadios.forEach(radio => {
@@ -42,6 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dischargePowerInput.value = power;
         }
     });
+
+    // Load parameters from URL if present
+    loadParametersFromUrl();
 });
 
 /**
@@ -178,6 +184,9 @@ async function handleFormSubmit(event) {
         await new Promise(resolve => setTimeout(resolve, 500));
         hideProgress();
         displayResults(totals, monthlySummary);
+
+        // Update URL with parameters for sharing
+        updateUrlWithParameters();
 
     } catch (error) {
         hideProgress();
@@ -465,4 +474,106 @@ function showDayDetail(dateKey) {
 function closeDetailView() {
     document.getElementById('detailView').style.display = 'none';
     document.getElementById('results').style.display = 'block';
+}
+
+/**
+ * Load parameters from URL query string
+ */
+function loadParametersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.size === 0) return;
+
+    // Load all form fields from URL
+    const fields = [
+        'year', 'capacity', 'chargePower', 'dischargePower',
+        'chargeEff', 'dischargeEff', 'minSoc', 'maxSoc', 'initialSoc'
+    ];
+
+    fields.forEach(field => {
+        if (params.has(field)) {
+            const element = document.getElementById(field);
+            if (element) {
+                element.value = params.get(field);
+            }
+        }
+    });
+
+    // Load price mode
+    if (params.has('priceMode')) {
+        const priceMode = params.get('priceMode');
+        const radio = document.querySelector(`input[name="priceMode"][value="${priceMode}"]`);
+        if (radio) {
+            radio.checked = true;
+
+            // Show custom inputs if custom mode
+            if (priceMode === 'custom') {
+                document.getElementById('customFormulaInputs').style.display = 'block';
+            }
+        }
+    }
+
+    // Load custom formulas if present
+    if (params.has('customBuy')) {
+        document.getElementById('customBuyFormula').value = decodeURIComponent(params.get('customBuy'));
+    }
+    if (params.has('customSell')) {
+        document.getElementById('customSellFormula').value = decodeURIComponent(params.get('customSell'));
+    }
+}
+
+/**
+ * Update URL with current parameters (called after form submission)
+ */
+function updateUrlWithParameters() {
+    const params = new URLSearchParams();
+
+    // Add all form fields
+    params.set('year', document.getElementById('year').value);
+    params.set('capacity', document.getElementById('capacity').value);
+    params.set('chargePower', document.getElementById('chargePower').value);
+    params.set('dischargePower', document.getElementById('dischargePower').value);
+    params.set('chargeEff', document.getElementById('chargeEff').value);
+    params.set('dischargeEff', document.getElementById('dischargeEff').value);
+    params.set('minSoc', document.getElementById('minSoc').value);
+    params.set('maxSoc', document.getElementById('maxSoc').value);
+    params.set('initialSoc', document.getElementById('initialSoc').value);
+
+    // Add price mode
+    const priceMode = document.querySelector('input[name="priceMode"]:checked').value;
+    params.set('priceMode', priceMode);
+
+    // Add custom formulas if custom mode
+    if (priceMode === 'custom') {
+        const customBuy = document.getElementById('customBuyFormula').value;
+        const customSell = document.getElementById('customSellFormula').value;
+        if (customBuy) params.set('customBuy', encodeURIComponent(customBuy));
+        if (customSell) params.set('customSell', encodeURIComponent(customSell));
+    }
+
+    // Update URL without reloading page
+    const newUrl = window.location.pathname + '?' + params.toString();
+    window.history.replaceState({}, '', newUrl);
+}
+
+/**
+ * Copy share URL to clipboard
+ */
+function copyShareUrl() {
+    const url = window.location.href;
+
+    navigator.clipboard.writeText(url).then(() => {
+        // Visual feedback
+        const button = document.getElementById('shareUrlButton');
+        const originalText = button.textContent;
+        button.textContent = '✓ Gekopieerd!';
+        button.style.backgroundColor = 'var(--secondary-color)';
+
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.backgroundColor = '';
+        }, 2000);
+    }).catch(err => {
+        alert('Kon URL niet kopiëren: ' + err.message);
+    });
 }
