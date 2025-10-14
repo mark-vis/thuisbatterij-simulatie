@@ -75,10 +75,8 @@ class BatteryOptimizer {
         const capacity = this.batteryConfig.capacityKwh;
         const minSoc = capacity * this.batteryConfig.minSocPct;
         const maxSoc = capacity * this.batteryConfig.maxSocPct;
-        const maxPower = Math.min(
-            this.batteryConfig.chargePowerKw,
-            this.batteryConfig.dischargePowerKw
-        ) * durationHours;
+        const maxChargePower = this.batteryConfig.chargePowerKw * durationHours;
+        const maxDischargePower = this.batteryConfig.dischargePowerKw * durationHours;
         const etaCharge = this.batteryConfig.chargeEfficiency;
         const etaDischarge = this.batteryConfig.dischargeEfficiency;
         const initialSoc = currentSocKwh;
@@ -123,8 +121,8 @@ class BatteryOptimizer {
         lpProblem += 'Bounds\n';
         for (let t = 0; t < nPeriods; t++) {
             // Charge and discharge power limits (DC energy)
-            lpProblem += ` 0 <= charge_${t} <= ${maxPower.toFixed(6)}\n`;
-            lpProblem += ` 0 <= discharge_${t} <= ${maxPower.toFixed(6)}\n`;
+            lpProblem += ` 0 <= charge_${t} <= ${maxChargePower.toFixed(6)}\n`;
+            lpProblem += ` 0 <= discharge_${t} <= ${maxDischargePower.toFixed(6)}\n`;
 
             // SoC limits
             lpProblem += ` ${minSoc.toFixed(6)} <= soc_${t} <= ${maxSoc.toFixed(6)}\n`;

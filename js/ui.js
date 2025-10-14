@@ -309,6 +309,7 @@ function showMonthDetail(monthKey) {
     document.getElementById('dailyView').style.display = 'block';
     document.getElementById('timestepView').style.display = 'none';
     document.getElementById('dayNavigation').style.display = 'none';
+    document.getElementById('monthNavigation').style.display = 'flex';
 
     // Populate daily table
     const tableBody = document.getElementById('dailyTableBody');
@@ -328,6 +329,25 @@ function showMonthDetail(monthKey) {
         `;
         row.addEventListener('click', () => showDayDetail(day.date));
         tableBody.appendChild(row);
+    }
+
+    // Setup month navigation buttons
+    const currentIndex = currentMonthlySummary.findIndex(m => m.monthName === monthKey);
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+
+    if (currentIndex > 0) {
+        prevMonthBtn.disabled = false;
+        prevMonthBtn.onclick = () => showMonthDetail(currentMonthlySummary[currentIndex - 1].monthName);
+    } else {
+        prevMonthBtn.disabled = true;
+    }
+
+    if (currentIndex < currentMonthlySummary.length - 1) {
+        nextMonthBtn.disabled = false;
+        nextMonthBtn.onclick = () => showMonthDetail(currentMonthlySummary[currentIndex + 1].monthName);
+    } else {
+        nextMonthBtn.disabled = true;
     }
 
     // Setup back button
@@ -350,34 +370,78 @@ function showDayDetail(dateKey) {
     document.getElementById('dailyView').style.display = 'none';
     document.getElementById('timestepView').style.display = 'block';
 
-    // Show day navigation
+    // Show day navigation, hide month navigation
     document.getElementById('dayNavigation').style.display = 'flex';
+    document.getElementById('monthNavigation').style.display = 'none';
 
     // Create chart
     createTimestepChart(timestepData);
 
-    // Setup navigation buttons
+    // Setup navigation buttons - use ALL days from entire simulation
     const monthKey = dateKey.substring(0, 7);  // Extract "2024-10" from "2024-10-15"
-    const dailySummary = currentSimulator.getDailySummary(monthKey);
-    const currentIndex = dailySummary.findIndex(d => d.date === dateKey);
 
-    const prevBtn = document.getElementById('prevDay');
-    const nextBtn = document.getElementById('nextDay');
+    // Get all days from all months
+    const allDays = [];
+    for (const month of currentMonthlySummary) {
+        const monthDays = currentSimulator.getDailySummary(month.monthName);
+        allDays.push(...monthDays);
+    }
+
+    const currentIndex = allDays.findIndex(d => d.date === dateKey);
+
+    const prevDayBtn = document.getElementById('prevDay');
+    const nextDayBtn = document.getElementById('nextDay');
+    const prevWeekBtn = document.getElementById('prevWeek');
+    const nextWeekBtn = document.getElementById('nextWeek');
+    const prevMonthDayBtn = document.getElementById('prevMonthDay');
+    const nextMonthDayBtn = document.getElementById('nextMonthDay');
 
     // Previous day
     if (currentIndex > 0) {
-        prevBtn.disabled = false;
-        prevBtn.onclick = () => showDayDetail(dailySummary[currentIndex - 1].date);
+        prevDayBtn.disabled = false;
+        prevDayBtn.onclick = () => showDayDetail(allDays[currentIndex - 1].date);
     } else {
-        prevBtn.disabled = true;
+        prevDayBtn.disabled = true;
     }
 
     // Next day
-    if (currentIndex < dailySummary.length - 1) {
-        nextBtn.disabled = false;
-        nextBtn.onclick = () => showDayDetail(dailySummary[currentIndex + 1].date);
+    if (currentIndex < allDays.length - 1) {
+        nextDayBtn.disabled = false;
+        nextDayBtn.onclick = () => showDayDetail(allDays[currentIndex + 1].date);
     } else {
-        nextBtn.disabled = true;
+        nextDayBtn.disabled = true;
+    }
+
+    // Previous week (7 days)
+    if (currentIndex >= 7) {
+        prevWeekBtn.disabled = false;
+        prevWeekBtn.onclick = () => showDayDetail(allDays[currentIndex - 7].date);
+    } else {
+        prevWeekBtn.disabled = true;
+    }
+
+    // Next week (7 days)
+    if (currentIndex + 7 < allDays.length) {
+        nextWeekBtn.disabled = false;
+        nextWeekBtn.onclick = () => showDayDetail(allDays[currentIndex + 7].date);
+    } else {
+        nextWeekBtn.disabled = true;
+    }
+
+    // Previous month (~30 days)
+    if (currentIndex >= 30) {
+        prevMonthDayBtn.disabled = false;
+        prevMonthDayBtn.onclick = () => showDayDetail(allDays[currentIndex - 30].date);
+    } else {
+        prevMonthDayBtn.disabled = true;
+    }
+
+    // Next month (~30 days)
+    if (currentIndex + 30 < allDays.length) {
+        nextMonthDayBtn.disabled = false;
+        nextMonthDayBtn.onclick = () => showDayDetail(allDays[currentIndex + 30].date);
+    } else {
+        nextMonthDayBtn.disabled = true;
     }
 
     // Update back button to go back to daily view

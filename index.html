@@ -212,9 +212,21 @@
             <div class="detail-header">
                 <button id="closeDetail" class="btn-back">← Terug</button>
                 <h3 id="detailTitle"></h3>
+
+                <!-- Month navigation (for daily view) -->
+                <div class="detail-nav" id="monthNavigation" style="display: none;">
+                    <button id="prevMonth" class="btn-nav">← Vorige maand</button>
+                    <button id="nextMonth" class="btn-nav">Volgende maand →</button>
+                </div>
+
+                <!-- Day/Week navigation (for timestep view) -->
                 <div class="detail-nav" id="dayNavigation" style="display: none;">
+                    <button id="prevMonthDay" class="btn-nav-small">←←← Maand</button>
+                    <button id="prevWeek" class="btn-nav-small">←← Week</button>
                     <button id="prevDay" class="btn-nav">← Vorige dag</button>
                     <button id="nextDay" class="btn-nav">Volgende dag →</button>
+                    <button id="nextWeek" class="btn-nav-small">Week →→</button>
+                    <button id="nextMonthDay" class="btn-nav-small">Maand →→→</button>
                 </div>
             </div>
             <div class="detail-content">
