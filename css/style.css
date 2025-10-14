@@ -176,7 +176,7 @@ nav h1 {
 .form-group-inline label {
     font-weight: 500;
     color: var(--text-primary);
-    min-width: 200px;
+    min-width: 220px;
     flex-shrink: 0;
 }
 
