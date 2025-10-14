@@ -215,6 +215,9 @@ function createTimestepChart(timestepData) {
         const date = new Date(d.timestamp);
         return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
     });
+
+    // Detect resolution (quarterly if we have 96+ datapoints for one day)
+    const isQuarterly = timestepData.length >= 96;
     const socData = timestepData.map(d => d.socPct);
     const profitData = timestepData.map(d => d.profitEur);
     const buyPriceData = timestepData.map(d => d.buyPriceEurKwh * 100);  // Convert to cents (EUR/kWh * 100)
@@ -365,6 +368,12 @@ function createTimestepChart(timestepData) {
                 x: {
                     grid: {
                         display: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: isQuarterly ? 24 : 24
                     }
                 }
             }

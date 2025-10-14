@@ -58,10 +58,9 @@ class BatterySimulator {
 
             // Check next available timestamp to determine step size
             const nextTs15min = currentTs + 15 * 60 * 1000;
-            const nextTs1hour = currentTs + 60 * 60 * 1000;
 
-            if (pricesMap.has(nextTs15min) && !pricesMap.has(nextTs1hour)) {
-                // Quarterly data
+            if (pricesMap.has(nextTs15min)) {
+                // Quarterly data (15-minute intervals)
                 timeStepMs = 15 * 60 * 1000;
                 resolution = 'quarterly';
                 durationHours = 0.25;
