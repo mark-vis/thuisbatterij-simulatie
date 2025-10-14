@@ -32,15 +32,76 @@ Note - DST Handling:
     - Summer time (clock forward): 23 hours ✓
     - Winter time (clock backward): 25 hours ✓
     - DST transitions are now handled correctly
+
+Note - Year-End Handling:
+    - The python-energyzero library has a timezone conversion bug that causes the last hour
+      of the year (Dec 31, 23:00) to be missing
+    - Bug: library uses current timezone (e.g., CEST) for all conversions, even winter dates
+    - This script detects and fixes this by making a direct API call with correct UTC times
 """
 
 import asyncio
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, UTC
 from pathlib import Path
 from zoneinfo import ZoneInfo
+import aiohttp
 from energyzero import EnergyZero, PriceType
+
+
+async def fetch_direct_api(from_utc: str, till_utc: str) -> list:
+    """
+    Fetch data directly from EnergyZero API with explicit UTC times.
+    Used to work around library timezone conversion bugs.
+
+    Args:
+        from_utc: UTC timestamp (e.g., "2024-12-31T00:00:00.000Z")
+        till_utc: UTC timestamp (e.g., "2024-12-31T23:00:00.000Z")
+
+    Returns:
+        List of price points from API
+    """
+    query = """
+        query EnergyMarketPrices($input: EnergyMarketPricesInput!) {
+        energyMarketPrices(input: $input) {
+            prices {
+            energyPriceExcl
+            from
+            till
+            }
+        }
+        }
+        """
+
+    variables = {
+        "input": {
+            "from": from_utc,
+            "till": till_utc,
+            "intervalType": "Hourly",
+            "type": "Electricity"
+        }
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            'https://api.energyzero.nl/v1/gql',
+            json={
+                "query": query,
+                "variables": variables,
+                "operationName": "EnergyMarketPrices"
+            },
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "PythonEnergyZero"
+            }
+        ) as response:
+            data = await response.json()
+
+            if 'errors' in data:
+                raise Exception(f"API error: {data['errors']}")
+
+            return data['data']['energyMarketPrices']['prices']
 
 
 async def fetch_year(year: int) -> dict:
@@ -126,6 +187,57 @@ async def fetch_year(year: int) -> dict:
             current_date = date.fromordinal(end_date.toordinal() + 1)
             week_num += 1
 
+        # Workaround for library timezone bug: Check if Dec 31st is complete
+        # The library incorrectly uses current timezone for all conversions,
+        # causing it to request until 22:00 UTC instead of 23:00 UTC for Dec 31
+        dec31_hours = [p for p in prices if p['timestamp'].startswith(f'{year}-12-31')]
+        if len(dec31_hours) < 24:
+            print(f"  🔧 Fixing year-end: Dec 31 heeft {len(dec31_hours)} uren, zou 24 moeten zijn")
+            print(f"     Opnieuw ophalen met correcte UTC tijd...")
+
+            try:
+                # In winter (Dec 31), CET = UTC+1, so:
+                # Dec 31 00:00 CET = Dec 30 23:00 UTC
+                # Jan 1 00:00 CET = Dec 31 23:00 UTC
+                from_utc = f"{year}-12-30T23:00:00.000Z"
+                till_utc = f"{year}-12-31T23:00:00.000Z"
+
+                api_prices = await fetch_direct_api(from_utc, till_utc)
+                print(f"     API geeft {len(api_prices)} timestamps")
+
+                # Remove existing Dec 31 timestamps
+                prices = [p for p in prices if not p['timestamp'].startswith(f'{year}-12-31')]
+
+                # Add new timestamps
+                for api_price in api_prices:
+                    from_str = api_price['from']
+                    price_kwh = api_price['energyPriceExcl']
+
+                    # Parse UTC timestamp
+                    utc_dt = datetime.fromisoformat(from_str.replace('Z', '+00:00'))
+                    local_dt = utc_dt.astimezone(ZoneInfo('Europe/Amsterdam'))
+
+                    # Only include if in target year
+                    if local_dt.year != year:
+                        continue
+
+                    timestamp_str = local_dt.strftime('%Y-%m-%dT%H:%M:%S')
+                    price_eur_mwh = price_kwh * 1000
+
+                    prices.append({
+                        'timestamp': timestamp_str,
+                        'price': round(price_eur_mwh, 1)
+                    })
+
+                # Re-sort by timestamp
+                prices.sort(key=lambda p: p['timestamp'])
+
+                new_dec31_count = len([p for p in prices if p['timestamp'].startswith(f'{year}-12-31')])
+                print(f"     ✓ Dec 31 heeft nu {new_dec31_count} uren")
+
+            except Exception as e:
+                print(f"     ⚠️  Fout bij ophalen: {e}")
+
     count = len(prices)
     print(f"✓ Totaal {count} timestamps opgehaald")
 
@@ -201,7 +313,7 @@ async def main():
 
     # Determine output directory
     script_dir = Path(__file__).parent
-    output_dir = script_dir.parent / 'site' / 'data'
+    output_dir = script_dir.parent / 'data'
 
     if not output_dir.exists():
         print(f"❌ Output directory bestaat niet: {output_dir}")
