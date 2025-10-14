@@ -47,7 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Load parameters from URL if present
-    loadParametersFromUrl();
+    const hasParams = loadParametersFromUrl();
+
+    // Auto-run simulation if URL has parameters
+    if (hasParams) {
+        // Small delay to ensure form is fully populated
+        setTimeout(() => {
+            form.requestSubmit();
+        }, 100);
+    }
 });
 
 /**
@@ -478,11 +486,12 @@ function closeDetailView() {
 
 /**
  * Load parameters from URL query string
+ * @returns {boolean} True if parameters were loaded
  */
 function loadParametersFromUrl() {
     const params = new URLSearchParams(window.location.search);
 
-    if (params.size === 0) return;
+    if (params.size === 0) return false;
 
     // Load all form fields from URL
     const fields = [
@@ -520,6 +529,8 @@ function loadParametersFromUrl() {
     if (params.has('customSell')) {
         document.getElementById('customSellFormula').value = decodeURIComponent(params.get('customSell'));
     }
+
+    return true;
 }
 
 /**
