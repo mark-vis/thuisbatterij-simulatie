@@ -14,16 +14,17 @@ Dit haalt prijsdata op voor de opgegeven jaren en slaat deze op in `../site/data
 
 EnergyZero API heeft data vanaf **2019** tot heden.
 
-## DST Waarschuwing ⚠️
+## DST Handling ✅
 
-De EnergyZero API heeft **incomplete data** voor wintertijd overgangen:
+Het script handelt DST (zomer/wintertijd) overgangen **correct** af:
 
-- ✅ **Zomertijd** (klok vooruit): correct - 23 uren
-- ❌ **Wintertijd** (klok achteruit): **INCOMPLEET** - 24 uren in plaats van 25 uren
-  - Het extra uur (02:00-03:00) ontbreekt gedeeltelijk
-  - API bug, niet een script bug
+- ✅ **Zomertijd** (klok vooruit): 23 uren
+- ✅ **Wintertijd** (klok achteruit): 25 uren (inclusief het dubbele 02:00 uur)
 
-Voor **complete DST handling**, gebruik de originele CSV bestanden van Jeroen.nl (2013-2024).
+**Hoe het werkt:**
+- Haalt data op in 8-dagen periodes (met 1-dag overlap)
+- Vermijdt API edge case waar DST dag aan einde van range incomplete data geeft
+- Duplicate detectie op UTC tijd (niet lokale tijd) zodat dubbele lokale timestamps behouden blijven
 
 ## Voorbeeld Output
 
