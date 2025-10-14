@@ -123,14 +123,25 @@ async function handleFormSubmit(event) {
         } else {
             // Standard or bare mode
             // Formulas work in EUR/MWh internally, convert to EUR/kWh
-            priceConfig = {
-                buyFormula: priceMode === 'standard'
-                    ? (epex) => ((epex + 101.54) * 1.21 + 24.8) / 1000
-                    : (epex) => epex / 1000,  // bare mode
-                sellFormula: priceMode === 'standard'
-                    ? (epex) => ((epex + 101.54) * 1.21 + 24.8) / 1000  // SALDERING: zelfde als buy
-                    : (epex) => epex / 1000  // bare mode
-            };
+            if (priceMode === 'standard-saldering') {
+                // Met salderen: zelfde prijs voor inkoop en teruglevering
+                priceConfig = {
+                    buyFormula: (epex) => ((epex + 101.54) * 1.21 + 24.8) / 1000,
+                    sellFormula: (epex) => ((epex + 101.54) * 1.21 + 24.8) / 1000
+                };
+            } else if (priceMode === 'standard-no-saldering') {
+                // Zonder salderen: teruglevering alleen EPEX + inkoopvergoeding (zonder BTW)
+                priceConfig = {
+                    buyFormula: (epex) => ((epex + 101.54) * 1.21 + 24.8) / 1000,
+                    sellFormula: (epex) => (epex + 24.8 / 1.21) / 1000
+                };
+            } else {
+                // Bare mode
+                priceConfig = {
+                    buyFormula: (epex) => epex / 1000,
+                    sellFormula: (epex) => epex / 1000
+                };
+            }
         }
 
         const simulationConfig = {

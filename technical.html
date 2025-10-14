@@ -73,23 +73,30 @@
 
         <section>
             <h3>Prijzen</h3>
-            <p>De simulator ondersteunt drie prijs modes:</p>
+            <p>De simulator ondersteunt vier prijs modes:</p>
 
-            <h4>1. Standaard (Tibber 2025)</h4>
+            <h4>1. Standaard met salderen (Tibber 2025)</h4>
             <p>
                 Inkoop: <code>(EPEX + €0,10154) × 1,21 + €0,0248</code><br>
                 Teruglevering: <code>(EPEX + €0,10154) × 1,21 + €0,0248</code>
             </p>
             <p><small>EPEX is in EUR/kWh. Door saldering is inkoop = teruglevering. Formule bevat opslag (€0,10154/kWh), BTW (21%) en vaste kosten (€0,0248/kWh).</small></p>
 
-            <h4>2. Kaal (EPEX zonder BTW)</h4>
+            <h4>2. Standaard zonder salderen (Tibber 2025)</h4>
+            <p>
+                Inkoop: <code>(EPEX + €0,10154) × 1,21 + €0,0248</code><br>
+                Teruglevering: <code>EPEX + €0,0248/1,21</code>
+            </p>
+            <p><small>Inkoop inclusief opslag, BTW en vaste kosten. Teruglevering is EPEX zonder BTW plus de inkoopvergoeding (€0,0248/1,21 = €0,0205/kWh zonder BTW).</small></p>
+
+            <h4>3. Kaal (EPEX zonder BTW)</h4>
             <p>
                 Inkoop: <code>EPEX</code><br>
                 Teruglevering: <code>EPEX</code>
             </p>
             <p><small>Puur EPEX day-ahead prijzen zonder toeslagen of BTW.</small></p>
 
-            <h4>3. Geavanceerd (eigen formules)</h4>
+            <h4>4. Geavanceerd (eigen formules)</h4>
             <p>Gebruikers kunnen eigen JavaScript formules invoeren voor inkoop en teruglevering prijzen. De variabele <code>epex</code> (in EUR/kWh) is beschikbaar.</p>
         </section>
 

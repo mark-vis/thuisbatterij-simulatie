@@ -94,12 +94,23 @@
                     <h3>Prijzen</h3>
                     <div class="form-group">
                         <label>
-                            <input type="radio" name="priceMode" value="standard" checked>
-                            Standaard (Tibber 2025)
+                            <input type="radio" name="priceMode" value="standard-saldering" checked>
+                            Standaard met salderen (Tibber 2025)
                         </label>
                         <small class="formula-display">
                             Inkoop: (EPEX + €0,10154) × 1,21 + €0,0248<br>
                             Teruglevering: (EPEX + €0,10154) × 1,21 + €0,0248<br>
+                            (EPEX in EUR/kWh)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="priceMode" value="standard-no-saldering">
+                            Standaard zonder salderen (Tibber 2025)
+                        </label>
+                        <small class="formula-display">
+                            Inkoop: (EPEX + €0,10154) × 1,21 + €0,0248<br>
+                            Teruglevering: EPEX + €0,0248/1,21<br>
                             (EPEX in EUR/kWh)
                         </small>
                     </div>
