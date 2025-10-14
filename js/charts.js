@@ -210,10 +210,35 @@ function createTimestepChart(timestepData) {
 
     const ctx = document.getElementById('timestepChart').getContext('2d');
 
-    // Prepare data
-    const labels = timestepData.map(d => {
+    // Prepare data - handle DST duplicates
+    const labels = timestepData.map((d, i) => {
         const date = new Date(d.timestamp);
-        return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+        const timeStr = date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+        // Check if this is a duplicate time (DST transition)
+        // Look ahead to see if next entry has same time string
+        if (i < timestepData.length - 1) {
+            const nextDate = new Date(timestepData[i + 1].timestamp);
+            const nextTimeStr = nextDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+            if (timeStr === nextTimeStr) {
+                // First occurrence - add CEST indicator
+                return `${timeStr} (zomertijd)`;
+            }
+        }
+
+        // Check if this is second occurrence of duplicate
+        if (i > 0) {
+            const prevDate = new Date(timestepData[i - 1].timestamp);
+            const prevTimeStr = prevDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+            if (timeStr === prevTimeStr) {
+                // Second occurrence - add CET indicator
+                return `${timeStr} (wintertijd)`;
+            }
+        }
+
+        return timeStr;
     });
 
     // Detect resolution (quarterly if we have 96+ datapoints for one day)
