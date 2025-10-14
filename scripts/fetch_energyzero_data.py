@@ -40,7 +40,7 @@ import sys
 from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo
-from energyzero import EnergyZero
+from energyzero import EnergyZero, PriceType
 
 
 async def fetch_year(year: int) -> dict:
@@ -77,7 +77,8 @@ async def fetch_year(year: int) -> dict:
                 print(f"  Week {week_num:2d} ({current_date} t/m {end_date})... ", end='', flush=True)
                 energy = await client.get_electricity_prices(
                     start_date=current_date,
-                    end_date=end_date
+                    end_date=end_date,
+                    price_type=PriceType.MARKET  # Raw market prices, excl. taxes (same as Jeroen.nl)
                 )
 
                 week_count = len(energy.timestamp_prices)
