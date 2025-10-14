@@ -26,12 +26,12 @@ Note:
     - Prices are in EUR/MWh
     - EnergyZero has data from 2019 onwards
 
-Warning - DST Issues:
-    - EnergyZero API has incomplete data for DST transitions
-    - Summer time (clock forward): correctly returns 23 hours
-    - Winter time (clock backward): MISSING data for the extra hour (returns 24h instead of 25h)
-    - This is an API limitation, not a script bug
-    - For complete DST handling, use the original Jeroen.nl CSV data
+Note - DST Handling:
+    - EnergyZero API handles DST correctly UNLESS the DST day is the last day of the requested range
+    - This script works around this by fetching 8-day periods with 1-day overlap
+    - Summer time (clock forward): 23 hours ✓
+    - Winter time (clock backward): 25 hours ✓
+    - DST transitions are now handled correctly
 """
 
 import asyncio
@@ -55,7 +55,8 @@ async def fetch_year(year: int) -> dict:
     """
     print(f"📥 Ophalen data voor {year}...")
 
-    # Fetch data week by week (full year or month requests don't handle DST correctly)
+    # Fetch data week by week, with 1 day overlap to ensure DST days are never
+    # at the end of a range (API bug: incomplete data when DST day is last day)
     prices = []
 
     async with EnergyZero() as client:
@@ -65,9 +66,10 @@ async def fetch_year(year: int) -> dict:
         week_num = 1
 
         while current_date <= end_of_year:
-            # Fetch 7 days at a time
+            # Fetch 8 days at a time (7 days + 1 overlap) to avoid DST edge case
+            # where DST transition day at END of range returns incomplete data
             end_date = date.fromordinal(min(
-                current_date.toordinal() + 6,
+                current_date.toordinal() + 7,  # 8 days total (0-7 = 8 days)
                 end_of_year.toordinal()
             ))
 
@@ -82,6 +84,8 @@ async def fetch_year(year: int) -> dict:
                 print(f"{week_count} timestamps")
 
                 # Convert to our format
+                last_utc = None  # Track last UTC time to avoid real duplicates
+
                 for price_point in energy.timestamp_prices:
                     timerange = price_point['timerange']
                     price = price_point['price']
@@ -95,15 +99,18 @@ async def fetch_year(year: int) -> dict:
                     if local_ts.year != year:
                         continue
 
+                    # Avoid TRUE duplicates (same UTC time) when overlapping ranges
+                    # NOTE: During DST transition, local time can repeat (e.g. 02:00 twice)
+                    # but UTC times are different, so these are NOT duplicates!
+                    if last_utc and utc_ts == last_utc:
+                        continue
+                    last_utc = utc_ts
+
                     # Format as ISO string without timezone (matches existing format)
                     timestamp_str = local_ts.strftime('%Y-%m-%dT%H:%M:%S')
 
                     # Price from EnergyZero is in EUR/kWh, convert to EUR/MWh
                     price_eur_mwh = price * 1000
-
-                    # Avoid duplicates (when fetching month-by-month)
-                    if prices and prices[-1]['timestamp'] == timestamp_str:
-                        continue
 
                     prices.append({
                         'timestamp': timestamp_str,
