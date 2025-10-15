@@ -288,10 +288,10 @@ function showConfigDetails(config, year, capacity) {
                 <h4>Efficiency</h4>
                 <p>Laden totaal: ${(config.chargeEfficiency * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Omvormer: ${(config.chargeInverterEff * 100).toFixed(1)}%</p>
-                <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.batteryRTE) * 100).toFixed(1)}%</p>
+                <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.chargeBatteryRTE) * 100).toFixed(1)}%</p>
                 <p>Ontladen totaal: ${(config.dischargeEfficiency * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Omvormer: ${(config.dischargeInverterEff * 100).toFixed(1)}%</p>
-                <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.batteryRTE) * 100).toFixed(1)}%</p>
+                <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.dischargeBatteryRTE) * 100).toFixed(1)}%</p>
             </div>
 
             <div class="detail-card">
