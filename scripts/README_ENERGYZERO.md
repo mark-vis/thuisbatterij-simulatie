@@ -1,30 +1,71 @@
 # EnergyZero Data Ophalen
 
-## Gebruik
+Er zijn twee scripts beschikbaar voor het ophalen van prijsdata:
+
+## 1. GraphQL API (aanbevolen voor 2020+)
+
+**Script:** `fetch_energyzero_data.py`
 
 ```bash
-cd simulatie
+cd scripts
 source venv/bin/activate
-python fetch_energyzero_data.py 2023 2024
+python fetch_energyzero_data.py 2023 2024 2025
 ```
 
-Dit haalt prijsdata op voor de opgegeven jaren en slaat deze op in `../site/data/prices_{year}.json`.
+**Voordelen:**
+- Gebruikt python-energyzero library
+- Correct handelt DST (zomer/wintertijd) overgangen af
+- Bevat workaround voor year-end timezone bug
+
+**Nadelen:**
+- ⚠️ API bug: 2019-10-27 en 2022-10-30 retourneren "bad_request" error
+- Voor deze jaren: gebruik Jeroen.nl CSV data
+
+## 2. REST API (alternatief)
+
+**Script:** `fetch_energyzero_rest.py`
+
+```bash
+cd scripts
+source venv/bin/activate
+python fetch_energyzero_rest.py 2023 2024 2025
+```
+
+**Voordelen:**
+- Directe REST API call (geen extra library)
+- Werkt voor alle jaren (geen "bad_request" errors)
+
+**Nadelen:**
+- ⚠️ Incomplete DST data voor sommige jaren:
+  - 2019: mist dubbel 02:00 uur op 2019-10-27 (24 uren i.p.v. 25)
+  - 2022: mist 02:00 dubbel + 22:00 op 2022-10-30 (23 uren i.p.v. 25)
+- Voor deze jaren: gebruik Jeroen.nl CSV data
+
+## Aanbeveling
+
+- **2020, 2021, 2023, 2024, 2025**: Gebruik `fetch_energyzero_data.py` (GraphQL)
+- **2019, 2022**: Gebruik Jeroen.nl CSV data (incomplete DST in EnergyZero database)
 
 ## Data Beschikbaarheid
 
-EnergyZero API heeft data vanaf **2019** tot heden.
+EnergyZero API heeft data vanaf **2015-2019** tot heden (afhankelijk van jaar).
 
-## DST Handling ✅
+## DST Handling
 
-Het script handelt DST (zomer/wintertijd) overgangen **correct** af:
+Beide scripts handelen DST (zomer/wintertijd) overgangen af:
 
 - ✅ **Zomertijd** (klok vooruit): 23 uren
 - ✅ **Wintertijd** (klok achteruit): 25 uren (inclusief het dubbele 02:00 uur)
 
-**Hoe het werkt:**
+**GraphQL script:**
 - Haalt data op in 8-dagen periodes (met 1-dag overlap)
 - Vermijdt API edge case waar DST dag aan einde van range incomplete data geeft
 - Duplicate detectie op UTC tijd (niet lokale tijd) zodat dubbele lokale timestamps behouden blijven
+
+**REST script:**
+- Haalt volledige jaar op in één request
+- Converteert UTC timestamps naar lokale NL tijd (CET/CEST)
+- Rapporteert data quality issues (incomplete dagen)
 
 ## Voorbeeld Output
 

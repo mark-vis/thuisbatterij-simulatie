@@ -4,6 +4,11 @@
 # Node modules (if any)
 node_modules/
 
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
 # Editor files
 .vscode/
 .idea/
