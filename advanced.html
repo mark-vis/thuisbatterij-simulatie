@@ -29,7 +29,7 @@
         </section>
 
         <div class="layout-two-column">
-        <section class="simulation-form">
+        <section class="simulation-form advanced-form">
             <form id="sweepForm">
                 <div class="form-section">
                     <div class="form-group-inline">
@@ -68,6 +68,7 @@
 
                 <div class="form-section">
                     <h3>Laadvermogen Sweep (DC)</h3>
+                    <small style="color: var(--text-secondary); display: block; margin-bottom: 0.75rem;">Max: 11 kW DC (omvormer limiet)</small>
                     <div class="form-group-inline">
                         <label for="chargePowerMin">Min (kW):</label>
                         <input type="number" id="chargePowerMin" name="chargePowerMin" min="0.1" max="11" step="0.1" value="2.0" required>
@@ -80,11 +81,11 @@
                         <label for="chargePowerStep">Step (kW):</label>
                         <input type="number" id="chargePowerStep" name="chargePowerStep" min="0.1" max="5" step="0.1" value="1.0" required>
                     </div>
-                    <small style="color: var(--text-secondary); margin-left: 220px;">Max: 11 kW DC (omvormer limiet)</small>
                 </div>
 
                 <div class="form-section">
                     <h3>Ontlaadvermogen Sweep (DC)</h3>
+                    <small style="color: var(--text-secondary); display: block; margin-bottom: 0.75rem;">Max: 17 kW DC (omvormer limiet)</small>
                     <div class="form-group-inline">
                         <label for="dischargePowerMin">Min (kW):</label>
                         <input type="number" id="dischargePowerMin" name="dischargePowerMin" min="0.1" max="17" step="0.1" value="2.0" required>
@@ -97,7 +98,6 @@
                         <label for="dischargePowerStep">Step (kW):</label>
                         <input type="number" id="dischargePowerStep" name="dischargePowerStep" min="0.1" max="5" step="0.1" value="1.0" required>
                     </div>
-                    <small style="color: var(--text-secondary); margin-left: 220px;">Max: 17 kW DC (omvormer limiet)</small>
                 </div>
 
                 <div class="form-section">

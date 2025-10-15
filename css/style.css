@@ -679,6 +679,20 @@ footer a:hover {
 
 /* Advanced page styles */
 
+/* Compact form sections for advanced page */
+.advanced-form .form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.advanced-form .form-section h3 {
+    margin-bottom: 0.5rem;
+}
+
+.advanced-form .form-group-inline {
+    margin-bottom: 0.5rem;
+}
+
 /* Heatmap */
 .heatmap-container {
     width: 100%;
