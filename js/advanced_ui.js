@@ -292,7 +292,6 @@ function showConfigDetails(config, year, capacity) {
                 <p>Ontladen totaal: ${(config.dischargeEfficiency * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Omvormer: ${(config.dischargeInverterEff * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.batteryRTE) * 100).toFixed(1)}%</p>
-                <p>Batterij RTE: ${(config.batteryRTE * 100).toFixed(1)}%</p>
             </div>
 
             <div class="detail-card">
@@ -368,12 +367,12 @@ function updateEfficiencyPreview() {
     preview.innerHTML = `
         <strong>@ ${chargeMid.toFixed(1)} kW laden (C=${chargeEff.cRate.toFixed(2)}):</strong><br>
         &nbsp;&nbsp;Omvormer: ${(chargeEff.chargeInverter * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;Batterij: ${(chargeEff.batterySingle * 100).toFixed(1)}% (√${(chargeEff.batteryRTE * 100).toFixed(1)}%)<br>
+        &nbsp;&nbsp;Batterij: ${(chargeEff.batterySingle * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;<strong>Totaal: ${(chargeEff.chargeTotal * 100).toFixed(1)}%</strong><br>
         <br>
         <strong>@ ${dischargeMid.toFixed(1)} kW ontladen (C=${dischargeEff.cRate.toFixed(2)}):</strong><br>
         &nbsp;&nbsp;Omvormer: ${(dischargeEff.dischargeInverter * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;Batterij: ${(dischargeEff.batterySingle * 100).toFixed(1)}% (√${(dischargeEff.batteryRTE * 100).toFixed(1)}%)<br>
+        &nbsp;&nbsp;Batterij: ${(dischargeEff.batterySingle * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;<strong>Totaal: ${(dischargeEff.dischargeTotal * 100).toFixed(1)}%</strong>
     `;
 
