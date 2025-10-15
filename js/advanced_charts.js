@@ -145,7 +145,7 @@ function createHeatmapGrid(sweepData, onCellClick) {
     html += '<div class="heatmap-grid" style="grid-template-columns: 80px repeat(' + chargePowers.length + ', 1fr);">';
 
     // Top-left corner (label)
-    html += '<div class="heatmap-header-corner">Laden ↓<br>Ontladen →</div>';
+    html += '<div class="heatmap-header-corner">Ontladen ↓<br>Laden →</div>';
 
     // Column headers (charge powers)
     for (const chargePower of chargePowers) {
