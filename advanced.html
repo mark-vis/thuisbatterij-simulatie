@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thuisbatterij Simulatie - EPEX Arbitrage</title>
+    <title>Geavanceerde Analyses - Thuisbatterij Simulatie</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -13,8 +13,8 @@
         <div class="nav-container">
             <h1>⚡ Thuisbatterij Simulatie</h1>
             <div class="nav-links">
-                <a href="index.html" class="active">Simulatie</a>
-                <a href="advanced.html">Geavanceerd</a>
+                <a href="index.html">Simulatie</a>
+                <a href="advanced.html" class="active">Geavanceerd</a>
                 <a href="technical.html">Technisch</a>
                 <a href="about.html">Over</a>
                 <a href="legal.html">Disclaimer</a>
@@ -24,17 +24,17 @@
 
     <main class="container">
         <section class="intro">
-            <h2>EPEX Arbitrage Simulator</h2>
-            <p>Simuleer de winst van batterijarbitage op de EPEX day-ahead markt. Vul hieronder jouw batterijspecificaties in en selecteer een jaar om te simuleren.</p>
+            <h2>Geavanceerde Analyses</h2>
+            <p>Vind de optimale configuratie voor jouw batterij met power-afhankelijke efficiency curves.</p>
         </section>
 
         <div class="layout-two-column">
         <section class="simulation-form">
-            <form id="simulationForm">
+            <form id="sweepForm">
                 <div class="form-section">
                     <div class="form-group-inline">
                         <label for="year">Jaar:</label>
-                        <select id="year" required>
+                        <select id="year" name="year" required>
                             <option value="2024" selected>2024</option>
                             <option value="2025">2025 (t/m oktober)</option>
                             <option value="2023">2023</option>
@@ -42,12 +42,6 @@
                             <option value="2021">2021</option>
                             <option value="2020">2020</option>
                             <option value="2019">2019</option>
-                            <option value="2018">2018</option>
-                            <option value="2017">2017</option>
-                            <option value="2016">2016</option>
-                            <option value="2015">2015</option>
-                            <option value="2014">2014</option>
-                            <option value="2013">2013</option>
                         </select>
                     </div>
                 </div>
@@ -56,38 +50,61 @@
                     <h3>Batterij Configuratie</h3>
                     <div class="form-group-inline">
                         <label for="capacity">Capaciteit (kWh):</label>
-                        <input type="number" id="capacity" min="1" max="100" step="0.1" value="32" required>
+                        <input type="number" id="capacity" name="capacity" min="1" max="100" step="0.1" value="32" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="initialSoc">Initiële SoC (%):</label>
-                        <input type="number" id="initialSoc" min="0" max="100" step="1" value="50" required>
+                        <input type="number" id="initialSoc" name="initialSoc" min="0" max="100" step="1" value="50" required>
                     </div>
-
-                    <div class="form-group-inline">
-                        <label for="chargePower">Laadvermogen DC (kW):</label>
-                        <input type="number" id="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
-                    </div>
-                    <div class="form-group-inline">
-                        <label for="dischargePower">Ontlaadvermogen DC (kW):</label>
-                        <input type="number" id="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
-                    </div>
-
-                    <div class="form-group-inline">
-                        <label for="chargeEff">Laadefficiëntie (%):</label>
-                        <input type="number" id="chargeEff" min="50" max="100" step="0.1" value="89" required>
-                    </div>
-                    <div class="form-group-inline">
-                        <label for="dischargeEff">Ontlaadefficiëntie (%):</label>
-                        <input type="number" id="dischargeEff" min="50" max="100" step="0.1" value="89" required>
-                    </div>
-
                     <div class="form-group-inline">
                         <label for="minSoc">Min SoC (%):</label>
-                        <input type="number" id="minSoc" min="0" max="100" step="1" value="0" required>
+                        <input type="number" id="minSoc" name="minSoc" min="0" max="100" step="1" value="0" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="maxSoc">Max SoC (%):</label>
-                        <input type="number" id="maxSoc" min="0" max="100" step="1" value="100" required>
+                        <input type="number" id="maxSoc" name="maxSoc" min="0" max="100" step="1" value="100" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Laadvermogen Sweep (DC)</h3>
+                    <div class="form-group-inline">
+                        <label for="chargePowerMin">Min (kW):</label>
+                        <input type="number" id="chargePowerMin" name="chargePowerMin" min="0.1" max="11" step="0.1" value="2.0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="chargePowerMax">Max (kW):</label>
+                        <input type="number" id="chargePowerMax" name="chargePowerMax" min="0.1" max="11" step="0.1" value="11.0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="chargePowerStep">Step (kW):</label>
+                        <input type="number" id="chargePowerStep" name="chargePowerStep" min="0.1" max="5" step="0.1" value="1.0" required>
+                    </div>
+                    <small style="color: var(--text-secondary); margin-left: 220px;">Max: 11 kW DC (omvormer limiet)</small>
+                </div>
+
+                <div class="form-section">
+                    <h3>Ontlaadvermogen Sweep (DC)</h3>
+                    <div class="form-group-inline">
+                        <label for="dischargePowerMin">Min (kW):</label>
+                        <input type="number" id="dischargePowerMin" name="dischargePowerMin" min="0.1" max="17" step="0.1" value="2.0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="dischargePowerMax">Max (kW):</label>
+                        <input type="number" id="dischargePowerMax" name="dischargePowerMax" min="0.1" max="17" step="0.1" value="17.0" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="dischargePowerStep">Step (kW):</label>
+                        <input type="number" id="dischargePowerStep" name="dischargePowerStep" min="0.1" max="5" step="0.1" value="1.0" required>
+                    </div>
+                    <small style="color: var(--text-secondary); margin-left: 220px;">Max: 17 kW DC (omvormer limiet)</small>
+                </div>
+
+                <div class="form-section">
+                    <h3>Efficiency Model</h3>
+                    <p><strong>Victron MultiPlus 5000 (3-phase)</strong></p>
+                    <div class="efficiency-preview" id="efficiencyPreview">
+                        <!-- Filled by JavaScript -->
                     </div>
                 </div>
 
@@ -136,22 +153,22 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customBuyFormula">Inkoop formule (JavaScript):</label>
-                                <input type="text" id="customBuyFormula" placeholder="epex => (epex + 0.10154) * 1.21 + 0.0248">
-                                <small>Variabele: epex (EUR/kWh), return EUR/kWh</small>
+                                <input type="text" id="customBuyFormula" name="customBuyFormula" placeholder="(epex / 1000 + 0.10154) * 1.21 + 0.0248">
+                                <small>Variabele: epex (EUR/MWh), return EUR/kWh</small>
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customSellFormula">Teruglevering formule (JavaScript):</label>
-                                <input type="text" id="customSellFormula" placeholder="epex => (epex + 0.10154) * 1.21 + 0.0248">
-                                <small>Variabele: epex (EUR/kWh), return EUR/kWh</small>
+                                <input type="text" id="customSellFormula" name="customSellFormula" placeholder="(epex / 1000 + 0.10154) * 1.21 + 0.0248">
+                                <small>Variabele: epex (EUR/MWh), return EUR/kWh</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" id="runButton">🚀 Start Simulatie</button>
+                    <button type="submit">🚀 Start Power Sweep</button>
                 </div>
             </form>
 
@@ -159,14 +176,18 @@
                 <div class="progress-bar">
                     <div id="progressBar" class="progress-fill"></div>
                 </div>
-                <p id="progressText">Bezig met simuleren...</p>
+                <p id="progressText">Bezig met sweep...</p>
             </div>
         </section>
 
         <section id="results" class="results-section" style="display: none;">
-            <h2>Simulatie Resultaten</h2>
+            <h2>Power Sweep Resultaten</h2>
 
             <div class="totals-summary">
+                <div class="total-card">
+                    <h3>Beste Configuratie</h3>
+                    <p class="total-value" id="bestConfigText" style="font-size: 1.2rem;">-</p>
+                </div>
                 <div class="total-card">
                     <h3>Totale Winst</h3>
                     <p class="total-value profit" id="totalProfit">€0.00</p>
@@ -179,94 +200,59 @@
                     <h3>Winst per Cycle</h3>
                     <p class="total-value" id="avgProfitPerCycle">€0.00</p>
                 </div>
+                <div class="total-card">
+                    <h3>Efficiency</h3>
+                    <p class="total-value" id="bestEfficiency" style="font-size: 1.2rem;">-</p>
+                    <small>Laden / Ontladen</small>
+                </div>
             </div>
 
-            <div class="charts-container">
-                <div class="chart-box">
-                    <h3>Maandelijkse Winst</h3>
-                    <canvas id="profitChart"></canvas>
+            <div id="diagonalChartContainer" class="chart-box full-width" style="display: none; margin-bottom: 2rem;">
+                <h3>Symmetrisch Vermogen (Diagonaal)</h3>
+                <div style="height: 400px;">
+                    <canvas id="diagonalChart"></canvas>
                 </div>
-                <div class="chart-box">
-                    <h3>Cycles per Maand</h3>
-                    <canvas id="cyclesChart"></canvas>
-                </div>
-                <div class="chart-box full-width">
-                    <h3>Winst per Cycle</h3>
-                    <canvas id="profitPerCycleChart"></canvas>
-                </div>
+            </div>
+
+            <div id="heatmapContainer" class="chart-box full-width" style="margin-bottom: 2rem;">
+                <h3>Volledig Grid (Heatmap)</h3>
+                <!-- Filled by JavaScript -->
             </div>
 
             <div class="table-container">
-                <h3>Maandelijks Overzicht</h3>
-                <table id="monthlyTable">
+                <h3>Top 10 Configuraties</h3>
+                <table id="top10Table">
                     <thead>
                         <tr>
-                            <th>Maand</th>
+                            <th>Laden (kW)</th>
+                            <th>Ontladen (kW)</th>
                             <th>Winst (€)</th>
                             <th>Cycles</th>
                             <th>€/Cycle</th>
-                            <th>Laad</th>
-                            <th>Ontlaad</th>
+                            <th>Eff Laden</th>
+                            <th>Eff Ontladen</th>
                         </tr>
                     </thead>
-                    <tbody id="monthlyTableBody">
+                    <tbody id="top10TableBody">
                     </tbody>
                 </table>
-            </div>
-
-            <div class="export-actions">
-                <button id="exportCsvButton" class="btn-secondary">📥 Download CSV</button>
-                <button id="shareUrlButton" class="btn-secondary">🔗 Kopieer URL</button>
-            </div>
-        </section>
-
-        <!-- Detail view (hidden by default) -->
-        <section id="detailView" class="detail-view" style="display: none;">
-            <div class="detail-header">
-                <button id="closeDetail" class="btn-back">← Terug</button>
-                <h3 id="detailTitle"></h3>
-
-                <!-- Month navigation (for daily view) -->
-                <div class="detail-nav" id="monthNavigation" style="display: none;">
-                    <button id="prevMonth" class="btn-nav">← Vorige maand</button>
-                    <button id="nextMonth" class="btn-nav">Volgende maand →</button>
-                </div>
-
-                <!-- Day/Week navigation (for timestep view) -->
-                <div class="detail-nav" id="dayNavigation" style="display: none;">
-                    <button id="prevMonthDay" class="btn-nav-small">←←← Maand</button>
-                    <button id="prevWeek" class="btn-nav-small">←← Week</button>
-                    <button id="prevDay" class="btn-nav">← Vorige dag</button>
-                    <button id="nextDay" class="btn-nav">Volgende dag →</button>
-                    <button id="nextWeek" class="btn-nav-small">Week →→</button>
-                    <button id="nextMonthDay" class="btn-nav-small">Maand →→→</button>
-                </div>
-            </div>
-            <div class="detail-content">
-                <!-- Day summary table -->
-                <div id="dailyView" class="table-container" style="display: none;">
-                    <table id="dailyTable">
-                        <thead>
-                            <tr>
-                                <th>Dag</th>
-                                <th>Winst (€)</th>
-                                <th>Cycles</th>
-                                <th>Gem. Prijs (€/kWh)</th>
-                                <th>SoC Min-Max (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dailyTableBody"></tbody>
-                    </table>
-                </div>
-
-                <!-- Hourly/quarterly chart -->
-                <div id="timestepView" class="chart-box" style="display: none;">
-                    <canvas id="timestepChart"></canvas>
-                </div>
             </div>
         </section>
         </div><!-- .layout-two-column -->
     </main>
+
+    <!-- Configuration Detail Modal -->
+    <div id="configModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <button id="closeModal" class="btn-secondary">✕ Sluiten</button>
+            </div>
+            <div id="modalContent">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
 
     <footer>
         <p>&copy; Mark Vis | Met dank aan <a href="https://jeroen.nl/" target="_blank">jeroen.nl</a> voor historische prijsdata</p>
@@ -279,7 +265,9 @@
     <script src="js/battery.js"></script>
     <script src="js/optimizer.js"></script>
     <script src="js/simulator.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/ui.js"></script>
+    <script src="js/efficiency_curves.js"></script>
+    <script src="js/power_sweep.js"></script>
+    <script src="js/advanced_charts.js"></script>
+    <script src="js/advanced_ui.js"></script>
 </body>
 </html>
