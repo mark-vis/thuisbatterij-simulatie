@@ -197,13 +197,14 @@ function displaySweepResults(sweepData, year, capacity) {
     const {bestConfig, diagonalData} = sweepData;
 
     // Summary cards
-    document.getElementById('bestConfigText').textContent =
-        `${bestConfig.chargePower} kW laden / ${bestConfig.dischargePower} kW ontladen`;
+    document.getElementById('bestConfigText').innerHTML =
+        `${bestConfig.chargePower} kW laden<br>${bestConfig.dischargePower} kW ontladen`;
     document.getElementById('totalProfit').textContent = '€' + bestConfig.profit.toFixed(2);
     document.getElementById('totalCycles').textContent = bestConfig.cycles.toFixed(1);
     document.getElementById('avgProfitPerCycle').textContent = '€' + bestConfig.profitPerCycle.toFixed(2);
-    document.getElementById('bestEfficiency').textContent =
-        `${(bestConfig.chargeEfficiency * 100).toFixed(1)}% / ${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%`;
+    const bestRTE = bestConfig.chargeEfficiency * bestConfig.dischargeEfficiency;
+    document.getElementById('bestEfficiency').innerHTML =
+        `RTE: ${(bestRTE * 100).toFixed(1)}%<br><small>${(bestConfig.chargeEfficiency * 100).toFixed(1)}% / ${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%</small>`;
 
     // Diagonal chart
     if (diagonalData.length > 0) {
@@ -286,6 +287,7 @@ function showConfigDetails(config, year, capacity) {
 
             <div class="detail-card">
                 <h4>Efficiency</h4>
+                <p><strong>RTE totaal: ${(config.chargeEfficiency * config.dischargeEfficiency * 100).toFixed(1)}%</strong></p>
                 <p>Laden totaal: ${(config.chargeEfficiency * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Omvormer: ${(config.chargeInverterEff * 100).toFixed(1)}%</p>
                 <p>&nbsp;&nbsp;↳ Batterij: ${(Math.sqrt(config.chargeBatteryRTE) * 100).toFixed(1)}%</p>
