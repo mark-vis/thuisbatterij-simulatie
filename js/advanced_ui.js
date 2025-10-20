@@ -360,33 +360,44 @@ function updatePowerLimits() {
     const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
     const effCurve = EfficiencyCurve[inverterPreset];
 
+    // Define defaults per inverter type
+    let chargeDefaults, dischargeDefaults;
+
+    if (inverterPreset === 'VICTRON_MP5000_1P') {
+        // 1-phase: lower power, finer steps
+        chargeDefaults = { min: 0.5, max: effCurve.maxChargePowerKw, step: 0.5 };
+        dischargeDefaults = { min: 0.5, max: effCurve.maxDischargePowerKw, step: 0.5 };
+    } else {
+        // 3-phase: higher power, coarser steps
+        chargeDefaults = { min: 2.0, max: effCurve.maxChargePowerKw, step: 2.0 };
+        dischargeDefaults = { min: 2.0, max: effCurve.maxDischargePowerKw, step: 2.0 };
+    }
+
     // Update charge power inputs
     const chargeMinInput = document.getElementById('chargePowerMin');
     const chargeMaxInput = document.getElementById('chargePowerMax');
+    const chargeStepInput = document.getElementById('chargePowerStep');
+
     chargeMinInput.max = effCurve.maxChargePowerKw;
     chargeMaxInput.max = effCurve.maxChargePowerKw;
 
-    // Adjust values if they exceed new limits
-    if (parseFloat(chargeMaxInput.value) > effCurve.maxChargePowerKw) {
-        chargeMaxInput.value = effCurve.maxChargePowerKw.toFixed(1);
-    }
-    if (parseFloat(chargeMinInput.value) > effCurve.maxChargePowerKw) {
-        chargeMinInput.value = Math.min(2.0, effCurve.maxChargePowerKw).toFixed(1);
-    }
+    // Set new defaults (only if current values exceed limits or are at old defaults)
+    chargeMinInput.value = chargeDefaults.min.toFixed(1);
+    chargeMaxInput.value = chargeDefaults.max.toFixed(1);
+    chargeStepInput.value = chargeDefaults.step.toFixed(1);
 
     // Update discharge power inputs
     const dischargeMinInput = document.getElementById('dischargePowerMin');
     const dischargeMaxInput = document.getElementById('dischargePowerMax');
+    const dischargeStepInput = document.getElementById('dischargePowerStep');
+
     dischargeMinInput.max = effCurve.maxDischargePowerKw;
     dischargeMaxInput.max = effCurve.maxDischargePowerKw;
 
-    // Adjust values if they exceed new limits
-    if (parseFloat(dischargeMaxInput.value) > effCurve.maxDischargePowerKw) {
-        dischargeMaxInput.value = effCurve.maxDischargePowerKw.toFixed(1);
-    }
-    if (parseFloat(dischargeMinInput.value) > effCurve.maxDischargePowerKw) {
-        dischargeMinInput.value = Math.min(2.0, effCurve.maxDischargePowerKw).toFixed(1);
-    }
+    // Set new defaults
+    dischargeMinInput.value = dischargeDefaults.min.toFixed(1);
+    dischargeMaxInput.value = dischargeDefaults.max.toFixed(1);
+    dischargeStepInput.value = dischargeDefaults.step.toFixed(1);
 
     // Update limit labels
     const chargeLimitLabel = document.querySelector('#sweepForm .form-section:nth-of-type(4) small');
