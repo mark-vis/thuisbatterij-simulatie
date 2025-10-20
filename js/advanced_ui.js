@@ -1,5 +1,5 @@
 /**
- * Advanced UI - Form handling and results display for power sweep analysis
+ * Advanced UI - Form handling and results display for power scan analysis
  */
 
 // Global state
@@ -80,7 +80,7 @@ async function handleSweepSubmit(e) {
     // Warn if grid is large
     if (totalPoints > 150) {
         const minutes = Math.ceil(totalPoints * 2 / 60);
-        if (!confirm(`Grote sweep: ${totalPoints} configuraties (±${minutes} minuten). Doorgaan?`)) {
+        if (!confirm(`Grote scan: ${totalPoints} configuraties (±${minutes} minuten). Doorgaan?`)) {
             return;
         }
     }
@@ -139,8 +139,8 @@ async function handleSweepSubmit(e) {
         displaySweepResults(sweepData, year, capacity);
 
     } catch (error) {
-        console.error('Sweep error:', error);
-        alert('Fout bij uitvoeren sweep: ' + error.message);
+        console.error('Scan error:', error);
+        alert('Fout bij uitvoeren scan: ' + error.message);
         progressContainer.style.display = 'none';
     } finally {
         // Re-enable form
@@ -304,8 +304,8 @@ function showConfigDetails(config, year, capacity) {
             <div class="detail-card">
                 <h4>Resultaten</h4>
                 <p>Totale winst: €${config.profit.toFixed(2)}</p>
-                <p>Cycles: ${config.cycles.toFixed(1)}</p>
-                <p>Winst per cycle: €${config.profitPerCycle.toFixed(2)}</p>
+                <p>Cycli: ${config.cycles.toFixed(1)}</p>
+                <p>Winst per cyclus: €${config.profitPerCycle.toFixed(2)}</p>
             </div>
         </div>
 
@@ -315,8 +315,8 @@ function showConfigDetails(config, year, capacity) {
                 <tr>
                     <th>Maand</th>
                     <th>Winst (€)</th>
-                    <th>Cycles</th>
-                    <th>€/Cycle</th>
+                    <th>Cycli</th>
+                    <th>€/cyclus</th>
                 </tr>
             </thead>
             <tbody>

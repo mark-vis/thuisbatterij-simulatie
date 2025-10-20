@@ -291,7 +291,7 @@ function exportToCsv() {
     }
 
     // Create CSV content
-    const headers = ['Maand', 'Winst (EUR)', 'Cycles', 'Winst per Cycle (EUR)', 'Laad Periodes', 'Ontlaad Periodes'];
+    const headers = ['Maand', 'Winst (EUR)', 'Cycli', 'Winst per cyclus (EUR)', 'Laad Periodes', 'Ontlaad Periodes'];
     const rows = currentMonthlySummary.map(m => [
         m.monthName,
         m.profitEur.toFixed(2),

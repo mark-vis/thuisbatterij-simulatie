@@ -98,7 +98,7 @@ function createCyclesChart(labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Cycles',
+                label: 'Cycli',
                 data: data,
                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
                 borderColor: 'rgba(54, 162, 235, 1)',
@@ -115,7 +115,7 @@ function createCyclesChart(labels, data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.parsed.y.toFixed(2) + ' cycles';
+                            return context.parsed.y.toFixed(2) + ' cycli';
                         }
                     }
                 }
@@ -148,7 +148,7 @@ function createProfitPerCycleChart(labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Winst per Cycle (€)',
+                label: 'Winst per cyclus (€)',
                 data: data,
                 backgroundColor: 'rgba(153, 102, 255, 0.2)',
                 borderColor: 'rgba(153, 102, 255, 1)',
@@ -169,7 +169,7 @@ function createProfitPerCycleChart(labels, data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return '€' + context.parsed.y.toFixed(2) + ' per cycle';
+                            return '€' + context.parsed.y.toFixed(2) + ' per cyclus';
                         }
                     }
                 }
