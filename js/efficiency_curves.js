@@ -8,7 +8,7 @@ class EfficiencyCurve {
      *
      * Formulas:
      * - Discharge efficiency: η = 1 - 6.56275e-6 × P_watt
-     * - Charge efficiency: η = 0.9131 + 2.012e-5×P - 3.979e-9×P² + 1.75e-13×P³
+     * - Charge efficiency: η = 0.94347 - 7.73e-7×P - 6.32e-11×P² - 3.98e-14×P³
      * - Battery RTE: η = 1 - 0.15 × C (C = C-rate = kW/kWh)
      *
      * Combined efficiency:
@@ -30,7 +30,7 @@ class EfficiencyCurve {
          */
         chargeEffInv: (powerWatt) => {
             const p = powerWatt;
-            const eff = 0.9131 + 2.012e-5*p - 3.979e-9*p*p + 1.75e-13*p*p*p;
+            const eff = 0.94347 - 7.73e-7*p - 6.32e-11*p*p - 3.98e-14*p*p*p;
             // Cap efficiency between 50% and 99.9%
             return Math.min(0.999, Math.max(0.5, eff));
         },
