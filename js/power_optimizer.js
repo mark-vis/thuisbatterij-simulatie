@@ -80,6 +80,8 @@ class PowerOptimizer {
             const bestProfit = -values[0];
             if (progressCallback) {
                 progressCallback(iteration, evaluations, bestProfit);
+                // Allow UI to update
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
 
             // Nelder-Mead iteration
