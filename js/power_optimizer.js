@@ -194,34 +194,35 @@ class PowerOptimizer {
         const chargeEff = this.efficiencyCurve.getCombinedEfficiency(chargePower, this.capacityKwh);
         const dischargeEff = this.efficiencyCurve.getCombinedEfficiency(dischargePower, this.capacityKwh);
 
-        // Create battery model
-        const battery = new BatteryModel(
-            this.capacityKwh,
-            chargePower,
-            dischargePower,
-            chargeEff.chargeTotal,
-            dischargeEff.dischargeTotal,
-            options.minSocPct,
-            options.maxSocPct
+        // Create battery configuration (same as power_sweep.js)
+        const batteryConfig = {
+            capacityKwh: this.capacityKwh,
+            chargePowerKw: chargePower,
+            dischargePowerKw: dischargePower,
+            chargeEfficiency: chargeEff.chargeTotal,
+            dischargeEfficiency: dischargeEff.dischargeTotal,
+            minSocPct: options.minSocPct / 100,
+            maxSocPct: options.maxSocPct / 100
+        };
+
+        // Run full year simulation
+        const simulator = new BatterySimulator(
+            batteryConfig,
+            this.priceConfig,
+            {initialSocPct: options.initialSocPct / 100},
+            this.pricesData
         );
 
-        // Run optimizer (MILP)
-        const optimizer = new BatteryOptimizer(battery);
-        const result = await optimizer.optimize(this.pricesData, this.priceConfig, options.initialSocPct);
-
-        // Calculate monthly summary
-        const monthlySummary = calculateMonthlySummary(result.schedule);
-
-        // Calculate total profit and cycles
-        const totalProfit = monthlySummary.reduce((sum, m) => sum + m.profitEur, 0);
-        const totalCycles = monthlySummary.reduce((sum, m) => sum + m.cycles, 0);
+        const history = await simulator.simulate();
+        const monthly = simulator.getMonthlySummary(history);
+        const totals = simulator.getTotals(monthly);
 
         return {
             chargePower: chargePower,
             dischargePower: dischargePower,
-            profit: totalProfit,
-            cycles: totalCycles,
-            profitPerCycle: totalCycles > 0 ? totalProfit / totalCycles : 0,
+            profit: totals.totalProfit,
+            cycles: totals.totalCycles,
+            profitPerCycle: totals.avgProfitPerCycle,
             chargeEfficiency: chargeEff.chargeTotal,
             dischargeEfficiency: dischargeEff.dischargeTotal,
             chargeInverterEff: chargeEff.chargeInverter,
@@ -230,8 +231,8 @@ class PowerOptimizer {
             dischargeBatteryRTE: dischargeEff.batteryRTE,
             chargeCRate: chargeEff.cRate,
             dischargeCRate: dischargeEff.cRate,
-            monthlySummary: monthlySummary,
-            schedule: result.schedule
+            monthlySummary: monthly,
+            history: history
         };
     }
 
