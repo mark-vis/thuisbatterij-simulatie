@@ -75,6 +75,23 @@
                 </div>
 
                 <div class="form-section">
+                    <h3>Analyse methode</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="analysisMode" value="sweep" checked>
+                            Vermogensscan (grid search)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="radio" name="analysisMode" value="optimize">
+                            Optimalisatie (gradient-based)
+                        </label>
+                    </div>
+                </div>
+
+                <div id="sweepInputs">
+                <div class="form-section">
                     <h3>Laadvermogen scan (DC)</h3>
                     <small style="color: var(--text-secondary); display: block; margin-bottom: 0.75rem;">Max: 11 kW DC (omvormer limiet)</small>
                     <div class="form-group-inline">
@@ -105,6 +122,32 @@
                     <div class="form-group-inline">
                         <label for="dischargePowerStep">Step (kW):</label>
                         <input type="number" id="dischargePowerStep" name="dischargePowerStep" min="0.1" max="5" step="0.1" value="2.0" required>
+                    </div>
+                </div>
+                </div><!-- #sweepInputs -->
+
+                <div id="optimizeInputs" style="display: none;">
+                <div class="form-section">
+                    <h3>Optimalisatie parameters</h3>
+                    <div class="form-group-inline">
+                        <label for="initialChargePower">Initieel laadvermogen (kW):</label>
+                        <input type="number" id="initialChargePower" name="initialChargePower" min="0.1" max="11" step="0.1" value="5.5" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="initialDischargePower">Initieel ontlaadvermogen (kW):</label>
+                        <input type="number" id="initialDischargePower" name="initialDischargePower" min="0.1" max="15" step="0.1" value="7.5" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="tolerance">Tolerantie (kW):</label>
+                        <input type="number" id="tolerance" name="tolerance" min="0.01" max="1" step="0.01" value="0.1" required>
+                    </div>
+                </div>
+                </div><!-- #optimizeInputs -->
+
+                <div class="form-section">
+                    <h3>Efficiëntiecurves</h3>
+                    <div style="height: 300px;">
+                        <canvas id="efficiencyCurveChart"></canvas>
                     </div>
                 </div>
 
@@ -175,7 +218,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit">🚀 Start vermogensscan</button>
+                    <button type="submit" id="submitButton">🚀 Start vermogensscan</button>
                 </div>
             </form>
 
@@ -273,6 +316,7 @@
     <script src="js/simulator.js"></script>
     <script src="js/efficiency_curves.js"></script>
     <script src="js/power_sweep.js"></script>
+    <script src="js/power_optimizer.js"></script>
     <script src="js/advanced_charts.js"></script>
     <script src="js/advanced_ui.js"></script>
 </body>

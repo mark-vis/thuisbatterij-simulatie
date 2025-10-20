@@ -13,7 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Attach form handler
     const form = document.getElementById('sweepForm');
-    form.addEventListener('submit', handleSweepSubmit);
+    form.addEventListener('submit', handleFormSubmit);
+
+    // Analysis mode switching
+    const analysisModeRadios = document.querySelectorAll('input[name="analysisMode"]');
+    analysisModeRadios.forEach(radio => {
+        radio.addEventListener('change', handleAnalysisModeChange);
+    });
 
     // Update efficiency preview when power inputs change
     const powerInputs = ['chargePowerMin', 'chargePowerMax', 'dischargePowerMin', 'dischargePowerMax', 'capacity', 'inverterPreset'];
@@ -22,22 +28,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (input) {
             input.addEventListener('input', updateEfficiencyPreview);
             if (id === 'inverterPreset') {
-                input.addEventListener('change', updatePowerLimits);
+                input.addEventListener('change', () => {
+                    updatePowerLimits();
+                    updateOptimizeInitials();
+                    updateEfficiencyCurveChart();
+                });
+            }
+            if (id === 'capacity') {
+                input.addEventListener('input', updateEfficiencyCurveChart);
             }
         }
     });
 
-    // Initial efficiency preview and power limits
+    // Optimize initial values
+    const optimizeInputs = ['initialChargePower', 'initialDischargePower'];
+    optimizeInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', updateEfficiencyPreview);
+        }
+    });
+
+    // Initial updates
     updatePowerLimits();
+    updateOptimizeInitials();
     updateEfficiencyPreview();
+    updateEfficiencyCurveChart();
 });
+
+/**
+ * Handle analysis mode change (sweep vs optimize)
+ */
+function handleAnalysisModeChange() {
+    const mode = document.querySelector('input[name="analysisMode"]:checked').value;
+    const sweepInputs = document.getElementById('sweepInputs');
+    const optimizeInputs = document.getElementById('optimizeInputs');
+    const submitButton = document.getElementById('submitButton');
+
+    if (mode === 'sweep') {
+        sweepInputs.style.display = 'block';
+        optimizeInputs.style.display = 'none';
+        submitButton.textContent = '🚀 Start vermogensscan';
+    } else {
+        sweepInputs.style.display = 'none';
+        optimizeInputs.style.display = 'block';
+        submitButton.textContent = '🎯 Start optimalisatie';
+    }
+
+    updateEfficiencyPreview();
+}
+
+/**
+ * Handle form submission (route to sweep or optimize)
+ */
+async function handleFormSubmit(e) {
+    e.preventDefault();
+
+    const mode = document.querySelector('input[name="analysisMode"]:checked').value;
+
+    if (mode === 'sweep') {
+        await handleSweepSubmit(e);
+    } else {
+        await handleOptimizeSubmit(e);
+    }
+}
 
 /**
  * Handle sweep form submission
  */
 async function handleSweepSubmit(e) {
-    e.preventDefault();
-
     const form = e.target;
     const formData = new FormData(form);
 
@@ -271,6 +330,140 @@ function displaySweepResults(sweepData, year, capacity) {
 }
 
 /**
+ * Handle optimize form submission
+ */
+async function handleOptimizeSubmit(e) {
+    const form = e.target;
+    const formData = new FormData(form);
+
+    // Get form values
+    const year = parseInt(formData.get('year'));
+    const capacity = parseFloat(formData.get('capacity'));
+    const minSoc = parseFloat(formData.get('minSoc'));
+    const maxSoc = parseFloat(formData.get('maxSoc'));
+    const initialSoc = parseFloat(formData.get('initialSoc'));
+
+    const initialChargePower = parseFloat(formData.get('initialChargePower'));
+    const initialDischargePower = parseFloat(formData.get('initialDischargePower'));
+    const tolerance = parseFloat(formData.get('tolerance'));
+
+    const priceMode = formData.get('priceMode');
+
+    // Disable form
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+
+    // Show progress
+    const progressContainer = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    progressContainer.style.display = 'block';
+
+    try {
+        // Load price data
+        const pricesData = await loadPriceData(year);
+        currentPricesData = pricesData;
+
+        // Build price config
+        const priceConfig = buildPriceConfig(priceMode, formData);
+
+        // Get efficiency curve from selected preset
+        const inverterPreset = formData.get('inverterPreset') || 'VICTRON_MP5000_3P';
+        const efficiencyCurve = EfficiencyCurve[inverterPreset];
+
+        // Create optimizer
+        const optimizer = new PowerOptimizer(
+            capacity,
+            priceConfig,
+            pricesData,
+            efficiencyCurve
+        );
+
+        // Run optimization
+        const optimizeOptions = {
+            minSocPct: minSoc,
+            maxSocPct: maxSoc,
+            initialSocPct: initialSoc
+        };
+
+        const optimizeResult = await optimizer.optimize(
+            initialChargePower,
+            initialDischargePower,
+            tolerance,
+            optimizeOptions,
+            (iteration, evaluations, bestProfit) => {
+                progressBar.style.width = '50%'; // Indeterminate progress
+                progressText.textContent = `Iteratie ${iteration}, ${evaluations} evaluaties - beste winst: €${bestProfit.toFixed(2)}`;
+            }
+        );
+
+        // Hide progress
+        progressContainer.style.display = 'none';
+
+        // Display results
+        displayOptimizeResults(optimizeResult, year, capacity);
+
+    } catch (error) {
+        console.error('Optimalisatie error:', error);
+        alert('Fout bij uitvoeren optimalisatie: ' + error.message);
+        progressContainer.style.display = 'none';
+    } finally {
+        // Re-enable form
+        submitButton.disabled = false;
+    }
+}
+
+/**
+ * Display optimize results
+ */
+function displayOptimizeResults(optimizeResult, year, capacity) {
+    const resultsSection = document.getElementById('results');
+    resultsSection.style.display = 'block';
+
+    const bestConfig = optimizeResult.bestConfig;
+
+    // Summary cards
+    document.getElementById('bestConfigText').innerHTML =
+        `${bestConfig.chargePower.toFixed(1)} kW laden<br>${bestConfig.dischargePower.toFixed(1)} kW ontladen`;
+    document.getElementById('totalProfit').textContent = '€' + bestConfig.profit.toFixed(2);
+    document.getElementById('totalCycles').textContent = bestConfig.cycles.toFixed(1);
+    document.getElementById('avgProfitPerCycle').textContent = '€' + bestConfig.profitPerCycle.toFixed(2);
+    const bestRTE = bestConfig.chargeEfficiency * bestConfig.dischargeEfficiency;
+    document.getElementById('bestEfficiency').innerHTML =
+        `RTE: ${(bestRTE * 100).toFixed(1)}%<br><small>${(bestConfig.chargeEfficiency * 100).toFixed(1)}% / ${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%</small>`;
+
+    // Hide heatmap and diagonal charts (not applicable for optimize mode)
+    document.getElementById('diagonalChartContainer').style.display = 'none';
+    document.getElementById('heatmapContainer').style.display = 'none';
+
+    // Top 10 table - show only best config with convergence info
+    const tbody = document.getElementById('top10TableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td>${bestConfig.chargePower.toFixed(1)}</td>
+            <td>${bestConfig.dischargePower.toFixed(1)}</td>
+            <td class="profit-positive">€${bestConfig.profit.toFixed(2)}</td>
+            <td>${bestConfig.cycles.toFixed(1)}</td>
+            <td>€${bestConfig.profitPerCycle.toFixed(2)}</td>
+            <td>${(bestConfig.chargeEfficiency * 100).toFixed(1)}%</td>
+            <td>${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%</td>
+        </tr>
+        <tr>
+            <td colspan="7" style="text-align: center; padding: 1rem; color: var(--text-secondary);">
+                <small>
+                    <strong>Optimalisatie:</strong>
+                    ${optimizeResult.iterations} iteraties, ${optimizeResult.evaluations} evaluaties
+                    ${optimizeResult.converged ? '✓ Geconvergeerd' : '⚠️ Max iteraties bereikt'}
+                </small>
+            </td>
+        </tr>
+    `;
+
+    // Scroll to results
+    resultsSection.scrollIntoView({behavior: 'smooth'});
+}
+
+/**
  * Show detailed configuration modal
  */
 function showConfigDetails(config, year, capacity) {
@@ -416,30 +609,43 @@ function updatePowerLimits() {
  */
 function updateEfficiencyPreview() {
     const capacity = parseFloat(document.getElementById('capacity').value) || 32;
-    const chargeMin = parseFloat(document.getElementById('chargePowerMin').value) || 2;
-    const chargeMax = parseFloat(document.getElementById('chargePowerMax').value) || 11;
-    const dischargeMin = parseFloat(document.getElementById('dischargePowerMin').value) || 2;
-    const dischargeMax = parseFloat(document.getElementById('dischargePowerMax').value) || 17;
 
-    const chargeMid = (chargeMin + chargeMax) / 2;
-    const dischargeMid = (dischargeMin + dischargeMax) / 2;
+    // Determine current mode
+    const mode = document.querySelector('input[name="analysisMode"]:checked')?.value || 'sweep';
+
+    let chargePower, dischargePower;
+
+    if (mode === 'optimize') {
+        // Use initial values for optimize mode
+        chargePower = parseFloat(document.getElementById('initialChargePower').value) || 5.5;
+        dischargePower = parseFloat(document.getElementById('initialDischargePower').value) || 7.5;
+    } else {
+        // Use midpoint for sweep mode
+        const chargeMin = parseFloat(document.getElementById('chargePowerMin').value) || 2;
+        const chargeMax = parseFloat(document.getElementById('chargePowerMax').value) || 11;
+        const dischargeMin = parseFloat(document.getElementById('dischargePowerMin').value) || 2;
+        const dischargeMax = parseFloat(document.getElementById('dischargePowerMax').value) || 17;
+
+        chargePower = (chargeMin + chargeMax) / 2;
+        dischargePower = (dischargeMin + dischargeMax) / 2;
+    }
 
     // Get selected inverter preset
     const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
     const effCurve = EfficiencyCurve[inverterPreset];
 
-    const chargeEff = effCurve.getCombinedEfficiency(chargeMid, capacity);
-    const dischargeEff = effCurve.getCombinedEfficiency(dischargeMid, capacity);
+    const chargeEff = effCurve.getCombinedEfficiency(chargePower, capacity);
+    const dischargeEff = effCurve.getCombinedEfficiency(dischargePower, capacity);
 
     const preview = document.getElementById('efficiencyPreview');
     preview.innerHTML = `
         <p><strong>${effCurve.name}</strong></p>
-        <strong>@ ${chargeMid.toFixed(1)} kW laden (C=${chargeEff.cRate.toFixed(2)}):</strong><br>
+        <strong>@ ${chargePower.toFixed(1)} kW laden (C=${chargeEff.cRate.toFixed(2)}):</strong><br>
         &nbsp;&nbsp;Omvormer: ${(chargeEff.chargeInverter * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;Batterij: ${(chargeEff.batterySingle * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;<strong>Totaal: ${(chargeEff.chargeTotal * 100).toFixed(1)}%</strong><br>
         <br>
-        <strong>@ ${dischargeMid.toFixed(1)} kW ontladen (C=${dischargeEff.cRate.toFixed(2)}):</strong><br>
+        <strong>@ ${dischargePower.toFixed(1)} kW ontladen (C=${dischargeEff.cRate.toFixed(2)}):</strong><br>
         &nbsp;&nbsp;Omvormer: ${(dischargeEff.dischargeInverter * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;Batterij: ${(dischargeEff.batterySingle * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;<strong>Totaal: ${(dischargeEff.dischargeTotal * 100).toFixed(1)}%</strong>
@@ -449,6 +655,40 @@ function updateEfficiencyPreview() {
     if (chargeEff.cRate > 2.0 || dischargeEff.cRate > 2.0) {
         preview.innerHTML += '<br><br><span style="color: var(--danger-color);">⚠️ Let op: hoge C-rate, belastend voor batterij!</span>';
     }
+}
+
+/**
+ * Update initial optimize values based on selected inverter
+ */
+function updateOptimizeInitials() {
+    const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
+    const effCurve = EfficiencyCurve[inverterPreset];
+
+    const initialChargeInput = document.getElementById('initialChargePower');
+    const initialDischargeInput = document.getElementById('initialDischargePower');
+
+    if (initialChargeInput && initialDischargeInput) {
+        // Set to midpoint of available range
+        const initialCharge = effCurve.maxChargePowerKw / 2;
+        const initialDischarge = effCurve.maxDischargePowerKw / 2;
+
+        initialChargeInput.value = initialCharge.toFixed(1);
+        initialChargeInput.max = effCurve.maxChargePowerKw;
+
+        initialDischargeInput.value = initialDischarge.toFixed(1);
+        initialDischargeInput.max = effCurve.maxDischargePowerKw;
+    }
+}
+
+/**
+ * Update efficiency curve chart
+ */
+function updateEfficiencyCurveChart() {
+    const capacity = parseFloat(document.getElementById('capacity').value) || 32;
+    const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
+    const effCurve = EfficiencyCurve[inverterPreset];
+
+    createEfficiencyCurveChart(effCurve, capacity);
 }
 
 // Show/hide custom formula inputs

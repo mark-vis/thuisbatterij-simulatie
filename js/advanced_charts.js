@@ -2,8 +2,9 @@
  * Advanced Charts - Heatmap and diagonal chart for power sweep results
  */
 
-// Global chart instance
+// Global chart instances
 let diagonalChart = null;
+let efficiencyCurveChart = null;
 
 /**
  * Create diagonal chart (profit vs symmetric power)
@@ -265,5 +266,177 @@ function attachHeatmapHandlers(onCellClick) {
             const dischargePower = parseFloat(cell.dataset.discharge);
             onCellClick(chargePower, dischargePower);
         });
+    });
+}
+
+/**
+ * Create efficiency curve chart showing inverter and battery efficiency vs power
+ * @param {Object} effCurve - Efficiency curve preset (e.g., EfficiencyCurve.VICTRON_MP5000_3P)
+ * @param {number} capacityKwh - Battery capacity in kWh
+ */
+function createEfficiencyCurveChart(effCurve, capacityKwh) {
+    // Destroy existing chart
+    if (efficiencyCurveChart) {
+        efficiencyCurveChart.destroy();
+    }
+
+    const ctx = document.getElementById('efficiencyCurveChart').getContext('2d');
+
+    // Generate power range (0 to max, 100 points)
+    const maxPower = Math.max(effCurve.maxChargePowerKw, effCurve.maxDischargePowerKw);
+    const numPoints = 100;
+    const powers = [];
+    for (let i = 0; i <= numPoints; i++) {
+        powers.push((i / numPoints) * maxPower);
+    }
+
+    // Calculate efficiencies for each power level
+    const chargeInverterEffs = [];
+    const dischargeInverterEffs = [];
+    const batteryChargeEffs = [];
+    const batteryDischargeEffs = [];
+    const totalChargeEffs = [];
+    const totalDischargeEffs = [];
+
+    for (const power of powers) {
+        const eff = effCurve.getCombinedEfficiency(power, capacityKwh);
+
+        chargeInverterEffs.push((eff.chargeInverter * 100).toFixed(2));
+        dischargeInverterEffs.push((eff.dischargeInverter * 100).toFixed(2));
+        batteryChargeEffs.push((eff.batterySingle * 100).toFixed(2));
+        batteryDischargeEffs.push((eff.batterySingle * 100).toFixed(2)); // Same for both directions
+        totalChargeEffs.push((eff.chargeTotal * 100).toFixed(2));
+        totalDischargeEffs.push((eff.dischargeTotal * 100).toFixed(2));
+    }
+
+    efficiencyCurveChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: powers.map(p => p.toFixed(1)),
+            datasets: [
+                {
+                    label: 'Omvormer laden',
+                    data: chargeInverterEffs,
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Omvormer ontladen',
+                    data: dischargeInverterEffs,
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Batterij (single-direction)',
+                    data: batteryChargeEffs,
+                    borderColor: 'rgba(249, 115, 22, 1)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Totaal laden',
+                    data: totalChargeEffs,
+                    borderColor: 'rgba(239, 68, 68, 0.6)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Totaal ontladen',
+                    data: totalDischargeEffs,
+                    borderColor: 'rgba(34, 197, 94, 0.6)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.05)',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 10,
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const power = parseFloat(context[0].label);
+                            const cRate = power / capacityKwh;
+                            return `${power.toFixed(1)} kW (C=${cRate.toFixed(2)})`;
+                        },
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 50,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Efficiency (%)'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Vermogen (kW DC)'
+                    },
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 12,
+                        callback: function(value, index) {
+                            // Show every nth tick
+                            if (index % Math.ceil(powers.length / 12) === 0) {
+                                return powers[index].toFixed(1);
+                            }
+                            return '';
+                        }
+                    }
+                }
+            }
+        }
     });
 }
