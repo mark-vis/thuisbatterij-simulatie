@@ -16,12 +16,12 @@ class EfficiencyCurve {
      *
      * Limits:
      * - Max charge power: 11 kW DC
-     * - Max discharge power: 17 kW DC
+     * - Max discharge power: 15 kW DC
      */
     static VICTRON_MP5000_3P = {
         name: "Victron MultiPlus 5000 (3-phase)",
         maxChargePowerKw: 11.0,
-        maxDischargePowerKw: 17.0,
+        maxDischargePowerKw: 15.0,
 
         /**
          * Inverter charge efficiency
@@ -99,12 +99,12 @@ class EfficiencyCurve {
      *
      * Limits:
      * - Max charge power: 3.7 kW DC (single phase)
-     * - Max discharge power: 5.7 kW DC (single phase)
+     * - Max discharge power: 5.0 kW DC (single phase)
      */
     static VICTRON_MP5000_1P = {
         name: "Victron MultiPlus 5000 (1-phase)",
         maxChargePowerKw: 3.7,
-        maxDischargePowerKw: 5.7,
+        maxDischargePowerKw: 5.0,
 
         /**
          * Inverter charge efficiency
