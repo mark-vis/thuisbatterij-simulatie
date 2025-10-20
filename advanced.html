@@ -47,6 +47,17 @@
                 </div>
 
                 <div class="form-section">
+                    <h3>Omvormer</h3>
+                    <div class="form-group-inline">
+                        <label for="inverterPreset">Type:</label>
+                        <select id="inverterPreset" name="inverterPreset" required>
+                            <option value="VICTRON_MP5000_3P" selected>Victron MultiPlus 5000 (3-phase)</option>
+                            <option value="VICTRON_MP5000_1P">Victron MultiPlus 5000 (1-phase)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <h3>Batterij Configuratie</h3>
                     <div class="form-group-inline">
                         <label for="capacity">Capaciteit (kWh):</label>
@@ -101,8 +112,7 @@
                 </div>
 
                 <div class="form-section">
-                    <h3>Efficiency Model</h3>
-                    <p><strong>Victron MultiPlus 5000 (3-phase)</strong></p>
+                    <h3>Efficiency Preview</h3>
                     <div class="efficiency-preview" id="efficiencyPreview">
                         <!-- Filled by JavaScript -->
                     </div>

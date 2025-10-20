@@ -16,15 +16,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     form.addEventListener('submit', handleSweepSubmit);
 
     // Update efficiency preview when power inputs change
-    const powerInputs = ['chargePowerMin', 'chargePowerMax', 'dischargePowerMin', 'dischargePowerMax', 'capacity'];
+    const powerInputs = ['chargePowerMin', 'chargePowerMax', 'dischargePowerMin', 'dischargePowerMax', 'capacity', 'inverterPreset'];
     powerInputs.forEach(id => {
         const input = document.getElementById(id);
         if (input) {
             input.addEventListener('input', updateEfficiencyPreview);
+            if (id === 'inverterPreset') {
+                input.addEventListener('change', updatePowerLimits);
+            }
         }
     });
 
-    // Initial efficiency preview
+    // Initial efficiency preview and power limits
+    updatePowerLimits();
     updateEfficiencyPreview();
 });
 
@@ -99,8 +103,9 @@ async function handleSweepSubmit(e) {
         // Build price config
         const priceConfig = buildPriceConfig(priceMode, formData);
 
-        // Get efficiency curve
-        const efficiencyCurve = EfficiencyCurve.VICTRON_MP5000_3P;
+        // Get efficiency curve from selected preset
+        const inverterPreset = formData.get('inverterPreset') || 'VICTRON_MP5000_3P';
+        const efficiencyCurve = EfficiencyCurve[inverterPreset];
 
         // Create sweep analysis
         const sweep = new PowerSweepAnalysis(
@@ -349,6 +354,53 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Update power limits based on selected inverter
+ */
+function updatePowerLimits() {
+    const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
+    const effCurve = EfficiencyCurve[inverterPreset];
+
+    // Update charge power inputs
+    const chargeMinInput = document.getElementById('chargePowerMin');
+    const chargeMaxInput = document.getElementById('chargePowerMax');
+    chargeMinInput.max = effCurve.maxChargePowerKw;
+    chargeMaxInput.max = effCurve.maxChargePowerKw;
+
+    // Adjust values if they exceed new limits
+    if (parseFloat(chargeMaxInput.value) > effCurve.maxChargePowerKw) {
+        chargeMaxInput.value = effCurve.maxChargePowerKw.toFixed(1);
+    }
+    if (parseFloat(chargeMinInput.value) > effCurve.maxChargePowerKw) {
+        chargeMinInput.value = Math.min(2.0, effCurve.maxChargePowerKw).toFixed(1);
+    }
+
+    // Update discharge power inputs
+    const dischargeMinInput = document.getElementById('dischargePowerMin');
+    const dischargeMaxInput = document.getElementById('dischargePowerMax');
+    dischargeMinInput.max = effCurve.maxDischargePowerKw;
+    dischargeMaxInput.max = effCurve.maxDischargePowerKw;
+
+    // Adjust values if they exceed new limits
+    if (parseFloat(dischargeMaxInput.value) > effCurve.maxDischargePowerKw) {
+        dischargeMaxInput.value = effCurve.maxDischargePowerKw.toFixed(1);
+    }
+    if (parseFloat(dischargeMinInput.value) > effCurve.maxDischargePowerKw) {
+        dischargeMinInput.value = Math.min(2.0, effCurve.maxDischargePowerKw).toFixed(1);
+    }
+
+    // Update limit labels
+    const chargeLimitLabel = document.querySelector('#sweepForm .form-section:nth-of-type(4) small');
+    if (chargeLimitLabel) {
+        chargeLimitLabel.textContent = `Max: ${effCurve.maxChargePowerKw.toFixed(1)} kW DC (omvormer limiet)`;
+    }
+
+    const dischargeLimitLabel = document.querySelector('#sweepForm .form-section:nth-of-type(5) small');
+    if (dischargeLimitLabel) {
+        dischargeLimitLabel.textContent = `Max: ${effCurve.maxDischargePowerKw.toFixed(1)} kW DC (omvormer limiet)`;
+    }
+}
+
+/**
  * Update efficiency preview
  */
 function updateEfficiencyPreview() {
@@ -361,12 +413,16 @@ function updateEfficiencyPreview() {
     const chargeMid = (chargeMin + chargeMax) / 2;
     const dischargeMid = (dischargeMin + dischargeMax) / 2;
 
-    const effCurve = EfficiencyCurve.VICTRON_MP5000_3P;
+    // Get selected inverter preset
+    const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
+    const effCurve = EfficiencyCurve[inverterPreset];
+
     const chargeEff = effCurve.getCombinedEfficiency(chargeMid, capacity);
     const dischargeEff = effCurve.getCombinedEfficiency(dischargeMid, capacity);
 
     const preview = document.getElementById('efficiencyPreview');
     preview.innerHTML = `
+        <p><strong>${effCurve.name}</strong></p>
         <strong>@ ${chargeMid.toFixed(1)} kW laden (C=${chargeEff.cRate.toFixed(2)}):</strong><br>
         &nbsp;&nbsp;Omvormer: ${(chargeEff.chargeInverter * 100).toFixed(1)}%<br>
         &nbsp;&nbsp;Batterij: ${(chargeEff.batterySingle * 100).toFixed(1)}%<br>
