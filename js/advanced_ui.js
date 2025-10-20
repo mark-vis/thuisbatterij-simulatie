@@ -278,8 +278,15 @@ function displaySweepResults(sweepData, year, capacity) {
         document.getElementById('diagonalChartContainer').style.display = 'none';
     }
 
-    // Heatmap
+    // Update table heading for sweep mode
+    const tableHeading = document.querySelector('.table-container h3');
+    if (tableHeading) {
+        tableHeading.textContent = 'Top 10 configuraties';
+    }
+
+    // Show and populate heatmap
     const heatmapContainer = document.getElementById('heatmapContainer');
+    heatmapContainer.style.display = 'block';
     heatmapContainer.innerHTML = createHeatmapGrid(sweepData, (chargePower, dischargePower) => {
         // Find and show configuration details
         const config = sweepData.results.find(r =>
@@ -386,14 +393,17 @@ async function handleOptimizeSubmit(e) {
             initialSocPct: initialSoc
         };
 
+        const maxIterations = 100; // Same as in PowerOptimizer
         const optimizeResult = await optimizer.optimize(
             initialChargePower,
             initialDischargePower,
             tolerance,
             optimizeOptions,
             (iteration, evaluations, bestProfit) => {
-                progressBar.style.width = '50%'; // Indeterminate progress
-                progressText.textContent = `Iteratie ${iteration}, ${evaluations} evaluaties - beste winst: €${bestProfit.toFixed(2)}`;
+                // Show progress based on iterations
+                const percent = Math.min(100, (iteration / maxIterations) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.textContent = `Iteratie ${iteration}/${maxIterations}, ${evaluations} evaluaties - beste winst: €${bestProfit.toFixed(2)}`;
             }
         );
 
@@ -436,28 +446,43 @@ function displayOptimizeResults(optimizeResult, year, capacity) {
     document.getElementById('diagonalChartContainer').style.display = 'none';
     document.getElementById('heatmapContainer').style.display = 'none';
 
-    // Top 10 table - show only best config with convergence info
+    // Update table heading for optimize mode
+    const tableHeading = document.querySelector('.table-container h3');
+    if (tableHeading) {
+        tableHeading.textContent = 'Optimaal resultaat';
+    }
+
+    // Best config table - show only best config with convergence info
     const tbody = document.getElementById('top10TableBody');
-    tbody.innerHTML = `
-        <tr>
-            <td>${bestConfig.chargePower.toFixed(1)}</td>
-            <td>${bestConfig.dischargePower.toFixed(1)}</td>
-            <td class="profit-positive">€${bestConfig.profit.toFixed(2)}</td>
-            <td>${bestConfig.cycles.toFixed(1)}</td>
-            <td>€${bestConfig.profitPerCycle.toFixed(2)}</td>
-            <td>${(bestConfig.chargeEfficiency * 100).toFixed(1)}%</td>
-            <td>${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%</td>
-        </tr>
-        <tr>
-            <td colspan="7" style="text-align: center; padding: 1rem; color: var(--text-secondary);">
-                <small>
-                    <strong>Optimalisatie:</strong>
-                    ${optimizeResult.iterations} iteraties, ${optimizeResult.evaluations} evaluaties
-                    ${optimizeResult.converged ? '✓ Geconvergeerd' : '⚠️ Max iteraties bereikt'}
-                </small>
-            </td>
-        </tr>
+    tbody.innerHTML = '';
+
+    // Create clickable row for best config
+    const row = document.createElement('tr');
+    row.className = 'clickable-row';
+    row.innerHTML = `
+        <td>${bestConfig.chargePower.toFixed(1)}</td>
+        <td>${bestConfig.dischargePower.toFixed(1)}</td>
+        <td class="profit-positive">€${bestConfig.profit.toFixed(2)}</td>
+        <td>${bestConfig.cycles.toFixed(1)}</td>
+        <td>€${bestConfig.profitPerCycle.toFixed(2)}</td>
+        <td>${(bestConfig.chargeEfficiency * 100).toFixed(1)}%</td>
+        <td>${(bestConfig.dischargeEfficiency * 100).toFixed(1)}%</td>
     `;
+    row.addEventListener('click', () => showConfigDetails(bestConfig, year, capacity));
+    tbody.appendChild(row);
+
+    // Add convergence info row
+    const infoRow = document.createElement('tr');
+    infoRow.innerHTML = `
+        <td colspan="7" style="text-align: center; padding: 1rem; color: var(--text-secondary); cursor: default;">
+            <small>
+                <strong>Optimalisatie:</strong>
+                ${optimizeResult.iterations} iteraties, ${optimizeResult.evaluations} evaluaties
+                ${optimizeResult.converged ? '✓ Geconvergeerd' : '⚠️ Max iteraties bereikt'}
+            </small>
+        </td>
+    `;
+    tbody.appendChild(infoRow);
 
     // Scroll to results
     resultsSection.scrollIntoView({behavior: 'smooth'});
