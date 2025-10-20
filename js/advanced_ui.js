@@ -496,14 +496,14 @@ function showConfigDetails(config, year, capacity) {
     const title = document.getElementById('modalTitle');
     const content = document.getElementById('modalContent');
 
-    title.textContent = `${config.chargePower} kW laden / ${config.dischargePower} kW ontladen`;
+    title.textContent = `${config.chargePower.toFixed(1)} kW laden / ${config.dischargePower.toFixed(1)} kW ontladen`;
 
     content.innerHTML = `
         <div class="config-details">
             <div class="detail-card">
                 <h4>Vermogen</h4>
-                <p>Laadvermogen: ${config.chargePower} kW DC</p>
-                <p>Ontlaadvermogen: ${config.dischargePower} kW DC</p>
+                <p>Laadvermogen: ${config.chargePower.toFixed(1)} kW DC</p>
+                <p>Ontlaadvermogen: ${config.dischargePower.toFixed(1)} kW DC</p>
                 <p>C-rate laden: ${config.chargeCRate.toFixed(2)}</p>
                 <p>C-rate ontladen: ${config.dischargeCRate.toFixed(2)}</p>
             </div>
