@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thuisbatterij Simulatie - EPEX Arbitrage</title>
+    <title>Simulatie met PV - Thuisbatterij Simulatie</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- Chart.js from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -13,8 +13,8 @@
         <div class="nav-container">
             <h1>⚡ Thuisbatterij Simulatie</h1>
             <div class="nav-links">
-                <a href="index.html" class="active">Simulatie</a>
-                <a href="with_solar.html">Met PV</a>
+                <a href="index.html">Simulatie</a>
+                <a href="with_solar.html" class="active">Met PV</a>
                 <a href="advanced.html">Geavanceerd</a>
                 <a href="technical.html">Technisch</a>
                 <a href="about.html">Over</a>
@@ -25,30 +25,44 @@
 
     <main class="container">
         <section class="intro">
-            <h2>EPEX Arbitrage Simulator</h2>
-            <p>Simuleer de winst van batterijarbitage op de EPEX day-ahead markt. Vul hieronder jouw batterijspecificaties in en selecteer een jaar om te simuleren.</p>
+            <h2>Simulatie met PV-opwek en Verbruik</h2>
+            <p>Simuleer de besparing van een batterij in combinatie met zonnepanelen. Vergelijk dynamische prijzen met en zonder batterij tegen een vast contract.</p>
         </section>
 
         <div class="layout-two-column">
         <section class="simulation-form">
-            <form id="simulationForm">
+            <form id="solarSimulationForm">
                 <div class="form-section">
+                    <h3>Dataselectie</h3>
                     <div class="form-group-inline">
                         <label for="year">Jaar:</label>
-                        <select id="year" required>
+                        <select id="year" name="year" required>
                             <option value="2024" selected>2024</option>
-                            <option value="2025">2025 (t/m oktober)</option>
-                            <option value="2023">2023</option>
-                            <option value="2022">2022</option>
-                            <option value="2021">2021</option>
-                            <option value="2020">2020</option>
-                            <option value="2019">2019</option>
-                            <option value="2018">2018</option>
-                            <option value="2017">2017</option>
-                            <option value="2016">2016</option>
-                            <option value="2015">2015</option>
-                            <option value="2014">2014</option>
-                            <option value="2013">2013</option>
+                        </select>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="consumptionProfile">Verbruiksprofiel:</label>
+                        <select id="consumptionProfile" name="consumptionProfile" required>
+                            <option value="basis" selected>Basis (~3.5 MWh/jaar)</option>
+                            <option value="wp">Met warmtepomp (~6.5 MWh/jaar)</option>
+                            <option value="ev">Met EV (~6.5 MWh/jaar)</option>
+                            <option value="wp_ev">Met WP + EV (~9.5 MWh/jaar)</option>
+                        </select>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="solarProfile">PV Systeem:</label>
+                        <select id="solarProfile" name="solarProfile" required>
+                            <option value="0kwp">Geen PV (0 kWp)</option>
+                            <option value="1kwp">1 kWp (~1.0 MWh/jaar)</option>
+                            <option value="2kwp">2 kWp (~2.1 MWh/jaar)</option>
+                            <option value="3kwp">3 kWp (~3.1 MWh/jaar)</option>
+                            <option value="4kwp">4 kWp (~4.1 MWh/jaar)</option>
+                            <option value="5kwp" selected>5 kWp (~5.2 MWh/jaar)</option>
+                            <option value="6kwp">6 kWp (~6.2 MWh/jaar)</option>
+                            <option value="7kwp">7 kWp (~7.3 MWh/jaar)</option>
+                            <option value="8kwp">8 kWp (~8.3 MWh/jaar)</option>
+                            <option value="9kwp">9 kWp (~9.4 MWh/jaar)</option>
+                            <option value="10kwp">10 kWp (~10.4 MWh/jaar)</option>
                         </select>
                     </div>
                 </div>
@@ -57,43 +71,43 @@
                     <h3>Batterijconfiguratie</h3>
                     <div class="form-group-inline">
                         <label for="capacity">Capaciteit (kWh):</label>
-                        <input type="number" id="capacity" min="1" max="200" step="0.1" value="32" required>
+                        <input type="number" id="capacity" name="capacity" min="1" max="200" step="0.1" value="32" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="initialSoc">Initiële SoC (%):</label>
-                        <input type="number" id="initialSoc" min="0" max="100" step="1" value="50" required>
+                        <input type="number" id="initialSoc" name="initialSoc" min="0" max="100" step="1" value="50" required>
                     </div>
 
                     <div class="form-group-inline">
                         <label for="chargePower">Laadvermogen DC (kW):</label>
-                        <input type="number" id="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                        <input type="number" id="chargePower" name="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="dischargePower">Ontlaadvermogen DC (kW):</label>
-                        <input type="number" id="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                        <input type="number" id="dischargePower" name="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
                     </div>
 
                     <div class="form-group-inline">
                         <label for="chargeEff">Laadefficiëntie (%):</label>
-                        <input type="number" id="chargeEff" min="50" max="100" step="0.1" value="89" required>
+                        <input type="number" id="chargeEff" name="chargeEff" min="50" max="100" step="0.1" value="89" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="dischargeEff">Ontlaadefficiëntie (%):</label>
-                        <input type="number" id="dischargeEff" min="50" max="100" step="0.1" value="89" required>
+                        <input type="number" id="dischargeEff" name="dischargeEff" min="50" max="100" step="0.1" value="89" required>
                     </div>
 
                     <div class="form-group-inline">
                         <label for="minSoc">Min SoC (%):</label>
-                        <input type="number" id="minSoc" min="0" max="100" step="1" value="10" required>
+                        <input type="number" id="minSoc" name="minSoc" min="0" max="100" step="1" value="10" required>
                     </div>
                     <div class="form-group-inline">
                         <label for="maxSoc">Max SoC (%):</label>
-                        <input type="number" id="maxSoc" min="0" max="100" step="1" value="100" required>
+                        <input type="number" id="maxSoc" name="maxSoc" min="0" max="100" step="1" value="100" required>
                     </div>
                 </div>
 
                 <div class="form-section">
-                    <h3>Prijzen</h3>
+                    <h3>Dynamische Prijzen</h3>
                     <div class="form-group">
                         <label>
                             <input type="radio" name="priceMode" value="standard-saldering" checked>
@@ -151,6 +165,18 @@
                     </div>
                 </div>
 
+                <div class="form-section">
+                    <h3>Vast Contract (referentie)</h3>
+                    <div class="form-group-inline">
+                        <label for="fixedBuyPrice">Inkoop (€/kWh):</label>
+                        <input type="number" id="fixedBuyPrice" name="fixedBuyPrice" min="0" max="1" step="0.001" value="0.25" required>
+                    </div>
+                    <div class="form-group-inline">
+                        <label for="fixedSellPrice">Teruglevering (€/kWh):</label>
+                        <input type="number" id="fixedSellPrice" name="fixedSellPrice" min="0" max="1" step="0.001" value="0.07" required>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" id="runButton">🚀 Start Simulatie</button>
                 </div>
@@ -169,101 +195,96 @@
 
             <div class="totals-summary">
                 <div class="total-card">
-                    <h3>Totale Winst</h3>
-                    <p class="total-value profit" id="totalProfit">€0.00</p>
+                    <h3>Zelfverbruik</h3>
+                    <p class="total-value" id="selfConsumption">0%</p>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;">met batterij</small>
                 </div>
                 <div class="total-card">
-                    <h3>Totale cycli</h3>
-                    <p class="total-value" id="totalCycles">0</p>
+                    <h3>Zelfvoorziening</h3>
+                    <p class="total-value" id="selfSufficiency">0%</p>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;">met batterij</small>
                 </div>
                 <div class="total-card">
-                    <h3>Winst per cyclus</h3>
-                    <p class="total-value" id="avgProfitPerCycle">€0.00</p>
-                </div>
-            </div>
-
-            <div class="charts-container">
-                <div class="chart-box">
-                    <h3>Maandelijkse Winst</h3>
-                    <canvas id="profitChart"></canvas>
-                </div>
-                <div class="chart-box">
-                    <h3>Cycli per maand</h3>
-                    <canvas id="cyclesChart"></canvas>
-                </div>
-                <div class="chart-box full-width">
-                    <h3>Winst per cyclus</h3>
-                    <canvas id="profitPerCycleChart"></canvas>
+                    <h3>Besparing Totaal</h3>
+                    <p class="total-value profit" id="totalSavings">€0.00</p>
+                    <small style="color: var(--text-secondary); font-size: 0.8rem;">vast → dynamisch + batterij</small>
                 </div>
             </div>
 
             <div class="table-container">
-                <h3>Maandelijks Overzicht</h3>
+                <h3>Scenariovergelijking</h3>
+                <table id="scenariosTable">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>Jaarkosten</th>
+                            <th>Zelfverbruik</th>
+                            <th>Zelfvoorziening</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scenariosTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container">
+                <h3>Besparingen in detail</h3>
+                <table id="savingsTable">
+                    <thead>
+                        <tr>
+                            <th>Vergelijking</th>
+                            <th>Besparing</th>
+                            <th>Toelichting</th>
+                        </tr>
+                    </thead>
+                    <tbody id="savingsTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-box full-width">
+                    <h3>Maandelijkse Kosten Vergelijking</h3>
+                    <div style="height: 400px;">
+                        <canvas id="costsComparisonChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Zelfverbruik per Maand</h3>
+                    <div style="height: 400px;">
+                        <canvas id="selfConsumptionChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Zelfvoorziening per Maand</h3>
+                    <div style="height: 400px;">
+                        <canvas id="selfSufficiencyChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box full-width">
+                    <h3>Energiestromen (met batterij)</h3>
+                    <div style="height: 400px;">
+                        <canvas id="energyFlowsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <h3>Maandelijks Overzicht (Met Batterij)</h3>
                 <table id="monthlyTable">
                     <thead>
                         <tr>
                             <th>Maand</th>
-                            <th>Winst (€)</th>
-                            <th>Cycli</th>
-                            <th>€/cyclus</th>
-                            <th>Laad</th>
-                            <th>Ontlaad</th>
+                            <th>Kosten (€)</th>
+                            <th>Verbruik (kWh)</th>
+                            <th>PV Opwek (kWh)</th>
+                            <th>Zelfverbruik (%)</th>
+                            <th>Zelfvoorziening (%)</th>
                         </tr>
                     </thead>
                     <tbody id="monthlyTableBody">
                     </tbody>
                 </table>
-            </div>
-
-            <div class="export-actions">
-                <button id="exportCsvButton" class="btn-secondary">📥 Download CSV</button>
-                <button id="shareUrlButton" class="btn-secondary">🔗 Kopieer URL</button>
-            </div>
-        </section>
-
-        <!-- Detail view (hidden by default) -->
-        <section id="detailView" class="detail-view" style="display: none;">
-            <div class="detail-header">
-                <button id="closeDetail" class="btn-back">← Terug</button>
-                <h3 id="detailTitle"></h3>
-
-                <!-- Month navigation (for daily view) -->
-                <div class="detail-nav" id="monthNavigation" style="display: none;">
-                    <button id="prevMonth" class="btn-nav">← Vorige maand</button>
-                    <button id="nextMonth" class="btn-nav">Volgende maand →</button>
-                </div>
-
-                <!-- Day/Week navigation (for timestep view) -->
-                <div class="detail-nav" id="dayNavigation" style="display: none;">
-                    <button id="prevMonthDay" class="btn-nav-small">←←← Maand</button>
-                    <button id="prevWeek" class="btn-nav-small">←← Week</button>
-                    <button id="prevDay" class="btn-nav">← Vorige dag</button>
-                    <button id="nextDay" class="btn-nav">Volgende dag →</button>
-                    <button id="nextWeek" class="btn-nav-small">Week →→</button>
-                    <button id="nextMonthDay" class="btn-nav-small">Maand →→→</button>
-                </div>
-            </div>
-            <div class="detail-content">
-                <!-- Day summary table -->
-                <div id="dailyView" class="table-container" style="display: none;">
-                    <table id="dailyTable">
-                        <thead>
-                            <tr>
-                                <th>Dag</th>
-                                <th>Winst (€)</th>
-                                <th>Cycli</th>
-                                <th>Gem. Prijs (€/kWh)</th>
-                                <th>SoC Min-Max (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dailyTableBody"></tbody>
-                    </table>
-                </div>
-
-                <!-- Hourly/quarterly chart -->
-                <div id="timestepView" class="chart-box" style="display: none;">
-                    <canvas id="timestepChart"></canvas>
-                </div>
             </div>
         </section>
         </div><!-- .layout-two-column -->
@@ -279,8 +300,7 @@
 
     <script src="js/battery.js"></script>
     <script src="js/optimizer.js"></script>
-    <script src="js/simulator.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/ui.js"></script>
+    <script src="js/solar_simulator.js"></script>
+    <script src="js/solar_ui.js"></script>
 </body>
 </html>

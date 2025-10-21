@@ -306,33 +306,41 @@ button[type="submit"]:disabled {
     }
 
     .total-card {
-        padding: 1.5rem;
+        padding: 0.875rem 1rem;
     }
 
     .total-value {
-        font-size: 2rem;
+        font-size: 1.35rem;
     }
 }
 
 .total-card {
     background-color: var(--surface);
     border-radius: 12px;
-    padding: 2rem;
+    padding: 1rem 1.25rem;
     text-align: center;
     box-shadow: var(--shadow);
 }
 
 .total-card h3 {
-    font-size: 1rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     font-weight: 500;
     margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .total-value {
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary-color);
+    line-height: 1.4;
+}
+
+.total-value small {
+    font-size: 0.65rem;
+    font-weight: 500;
 }
 
 .total-value.profit {
@@ -643,7 +651,7 @@ footer a:hover {
     }
 
     .total-value {
-        font-size: 2rem;
+        font-size: 1.25rem;
     }
 
     .content-page {

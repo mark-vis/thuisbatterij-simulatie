@@ -12,6 +12,7 @@
             <h1>⚡ Thuisbatterij Simulatie</h1>
             <div class="nav-links">
                 <a href="index.html">Simulatie</a>
+                <a href="with_solar.html">Met PV</a>
                 <a href="advanced.html">Geavanceerd</a>
                 <a href="technical.html" class="active">Technisch</a>
                 <a href="about.html">Over</a>
@@ -110,11 +111,40 @@
         </section>
 
         <section>
+            <h3>Simulatie met PV en Verbruik</h3>
+            <p>De <strong>"Met PV"</strong> pagina simuleert een realistischer scenario met zonnepanelen en huishoudelijk verbruik:</p>
+
+            <h4>Vier scenario's</h4>
+            <ol>
+                <li><strong>Vast contract zonder batterij</strong>: Vaste inkoop/teruglevering prijzen, geen batterij</li>
+                <li><strong>Vast contract met batterij</strong>: Greedy strategie om zelfverbruik te maximaliseren</li>
+                <li><strong>Dynamisch zonder batterij</strong>: EPEX prijzen, geen batterij</li>
+                <li><strong>Dynamisch met batterij</strong>: MILP optimalisatie op basis van EPEX prijzen</li>
+            </ol>
+
+            <h4>Greedy strategie (vast met batterij)</h4>
+            <p>Bij vaste prijzen is er geen arbitrage mogelijk. De batterij maximaliseert zelfverbruik:</p>
+            <ol>
+                <li>PV → direct naar verbruik</li>
+                <li>Overschot PV → batterij laden</li>
+                <li>Tekort → batterij ontladen</li>
+                <li>Net alleen als laatste optie</li>
+            </ol>
+
+            <h4>Verbruiks- en PV-profielen</h4>
+            <p>De simulatie ondersteunt realistische Nederlandse profielen:</p>
+            <ul>
+                <li><strong>Verbruik</strong>: Basis (~3,5 MWh/jaar), met warmtepomp (+3 MWh), met EV (+3 MWh), of beide</li>
+                <li><strong>PV</strong>: 0-10 kWp systemen met realistische zonnehoek en wolkendekking voor Nederland</li>
+            </ul>
+        </section>
+
+        <section>
             <h3>Beperkingen</h3>
             <ul>
                 <li>Geen onbalans of intraday markten</li>
-                <li>Geen eigen verbruik of PV-productie</li>
-                <li>Vaste efficiency curves (geen variatie met vermogen)</li>
+                <li>Arbitrage simulatie (index.html): Geen eigen verbruik of PV-productie</li>
+                <li>Geavanceerde analyse: Vaste efficiency curves (basisversie heeft wel vermogensafhankelijke curves)</li>
             </ul>
         </section>
 
