@@ -151,7 +151,7 @@ De simulator is gebaseerd op een niet-publieke Python implementatie en volledig 
 **JavaScript versie (deze repository):**
 - HiGHS solver voor MILP optimization (exact dezelfde formulering als Python)
 - Zelfde planning logica (day-ahead om 13:00)
-- Basis simulaties (index.html, with_solar.html): vaste efficiency percentages (89%)
+- Basis simulaties (index.html, with_solar.html): constante efficiency (instelbaar, standaard 89%, niet vermogensafhankelijk)
 - Geavanceerde analyse (advanced.html): vermogensafhankelijke efficiency curves (Victron MultiPlus 5000)
 
 ### Implementatie Status
