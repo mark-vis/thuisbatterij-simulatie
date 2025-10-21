@@ -114,6 +114,25 @@
             <h3>Simulatie met PV en Verbruik</h3>
             <p>De <strong>"Met PV"</strong> pagina simuleert een realistischer scenario met zonnepanelen en huishoudelijk verbruik:</p>
 
+            <h4>Zelfverbruik en Zelfvoorziening</h4>
+            <p>De simulator berekent twee belangrijke metrics:</p>
+
+            <p><strong>Zelfverbruik (Self-Consumption)</strong>: Hoeveel van de opgewekte PV-energie wordt zelf gebruikt (niet teruggeleverd)?</p>
+            <ul>
+                <li><strong>Zonder batterij</strong>: <code>Zelfverbruik = (PV direct naar verbruik) / (Totale PV opwek) × 100%</code></li>
+                <li><strong>Met batterij</strong>: <code>Zelfverbruik = (PV direct naar verbruik + PV naar batterij) / (Totale PV opwek) × 100%</code></li>
+                <li>PV-energie die naar de batterij gaat, telt als "verbruikt" (niet teruggeleverd)</li>
+            </ul>
+
+            <p><strong>Zelfvoorziening (Self-Sufficiency)</strong>: Hoeveel van je verbruik wordt gedekt door eigen opwek (niet van het net)?</p>
+            <ul>
+                <li><strong>Zonder batterij</strong>: <code>Zelfvoorziening = (PV direct naar verbruik) / (Totaal verbruik) × 100%</code></li>
+                <li><strong>Met batterij</strong>: <code>Zelfvoorziening = (PV direct naar verbruik + Batterij naar verbruik) / (Totaal verbruik) × 100%</code></li>
+                <li>Alle batterij-ontlading telt als zelfvoorziening, ook als de batterij deels vanaf het net is geladen</li>
+            </ul>
+
+            <p><em>NB: Bij dynamische prijzen kan de batterij zowel vanaf PV als vanaf het net worden geladen. De zelfvoorzieningsmetric telt alle batterij-ontlading, ongeacht de bron. Dit geeft een praktische maat voor de totale onafhankelijkheid van het net op elk moment.</em></p>
+
             <h4>Vier scenario's</h4>
             <ol>
                 <li><strong>Vast contract zonder batterij</strong>: Vaste inkoop/teruglevering prijzen, geen batterij</li>
