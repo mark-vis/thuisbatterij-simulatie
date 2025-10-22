@@ -502,8 +502,13 @@ function displayResults(results, monthlySummaries) {
 
     document.getElementById('totalCycles').textContent = dynWithBat.cycles.toFixed(1);
     document.getElementById('savingsPerCycle').textContent = '€' + (totalSavings / dynWithBat.cycles).toFixed(2);
+
+    // Grid import/export with comparison (with battery as main value, without battery for comparison)
     document.getElementById('gridImport').textContent = dynWithBat.totalImport.toFixed(0) + ' kWh';
+    document.getElementById('gridImportComparison').textContent = `zonder bat: ${dynNoBat.totalImport.toFixed(0)} kWh`;
+
     document.getElementById('gridExport').textContent = dynWithBat.totalExport.toFixed(0) + ' kWh';
+    document.getElementById('gridExportComparison').textContent = `zonder bat: ${dynNoBat.totalExport.toFixed(0)} kWh`;
 
     // Calculate price statistics for dynamic scenarios
     const priceStats = calculatePriceStatistics(dynNoBat, dynWithBat);
