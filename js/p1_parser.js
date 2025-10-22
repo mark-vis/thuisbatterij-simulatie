@@ -168,26 +168,43 @@ class P1Parser {
     }
 
     /**
-     * Aggregate data to hourly intervals
-     * Returns array with one entry per hour
+     * Aggregate data to specified interval (15 or 60 minutes)
+     * Returns array with one entry per interval
+     *
+     * Note: Vanaf oktober 2025 hebben we kwartier-prijsdata beschikbaar,
+     * dus moeten we flexibel kunnen aggregeren.
      */
-    aggregateToHourly(deltaData) {
+    aggregateToInterval(deltaData, targetIntervalMinutes = 60) {
         if (deltaData.length === 0) {
             throw new Error('Geen delta data om te aggregeren');
         }
 
-        // Group by hour
-        const hourlyMap = new Map();
+        if (targetIntervalMinutes !== 15 && targetIntervalMinutes !== 60) {
+            throw new Error('Alleen 15 of 60 minuten intervallen ondersteund');
+        }
+
+        // Group by target interval
+        const intervalMap = new Map();
 
         for (const delta of deltaData) {
-            // Round down to hour
-            const hourKey = new Date(delta.timestamp);
-            hourKey.setMinutes(0, 0, 0);
-            const hourKeyStr = hourKey.toISOString();
+            // Round down to target interval
+            const intervalKey = new Date(delta.timestamp);
 
-            if (!hourlyMap.has(hourKeyStr)) {
-                hourlyMap.set(hourKeyStr, {
-                    timestamp: hourKey,
+            if (targetIntervalMinutes === 60) {
+                // Round to hour
+                intervalKey.setMinutes(0, 0, 0);
+            } else {
+                // Round to nearest quarter (0, 15, 30, 45)
+                const minutes = intervalKey.getMinutes();
+                const roundedMinutes = Math.floor(minutes / 15) * 15;
+                intervalKey.setMinutes(roundedMinutes, 0, 0);
+            }
+
+            const intervalKeyStr = intervalKey.toISOString();
+
+            if (!intervalMap.has(intervalKeyStr)) {
+                intervalMap.set(intervalKeyStr, {
+                    timestamp: intervalKey,
                     importDelta: 0,
                     exportDelta: 0,
                     netGridFlow: 0,
@@ -195,19 +212,26 @@ class P1Parser {
                 });
             }
 
-            const hourData = hourlyMap.get(hourKeyStr);
-            hourData.importDelta += delta.importDelta;
-            hourData.exportDelta += delta.exportDelta;
-            hourData.netGridFlow += delta.netGridFlow;
-            hourData.sampleCount++;
+            const intervalData = intervalMap.get(intervalKeyStr);
+            intervalData.importDelta += delta.importDelta;
+            intervalData.exportDelta += delta.exportDelta;
+            intervalData.netGridFlow += delta.netGridFlow;
+            intervalData.sampleCount++;
         }
 
         // Convert to sorted array
-        const hourlyArray = Array.from(hourlyMap.values())
+        const intervalArray = Array.from(intervalMap.values())
             .sort((a, b) => a.timestamp - b.timestamp);
 
-        this.hourlyData = hourlyArray;
-        return hourlyArray;
+        this.hourlyData = intervalArray;  // Keep name for compatibility
+        return intervalArray;
+    }
+
+    /**
+     * Legacy wrapper for backward compatibility
+     */
+    aggregateToHourly(deltaData) {
+        return this.aggregateToInterval(deltaData, 60);
     }
 
     /**

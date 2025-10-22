@@ -52,18 +52,32 @@ async function handleFileUpload(e) {
         // Read file
         const csvString = await file.text();
 
-        // Parse and aggregate
+        // Parse CSV and calculate deltas, but don't aggregate yet
+        // We'll aggregate after loading price data to match its interval
         const parser = new P1Parser();
-        const result = await parser.parseAndAggregate(csvString);
+        const rawData = parser.parseCSV(csvString);
+        const interval = parser.detectInterval(rawData);
+        const deltaData = parser.calculateDeltas(rawData);
 
+        // Store raw data for later aggregation
         parsedData = {
-            hourlyData: result.hourlyData,
-            stats: result.stats,
-            formatted: parser.formatForSimulator(result.hourlyData)
+            parser: parser,
+            deltaData: deltaData,
+            rawData: rawData,
+            detectedInterval: interval,
+            year: rawData[0].timestamp.getFullYear(),
+            firstTimestamp: rawData[0].timestamp,
+            lastTimestamp: rawData[rawData.length - 1].timestamp
         };
 
-        // Show preview
-        displayDataPreview(parsedData);
+        // Show preview (using hourly aggregation for preview only)
+        const previewAggregated = parser.aggregateToInterval(deltaData, 60);
+        parser.calculateStats();
+        displayDataPreview({
+            hourlyData: previewAggregated,
+            stats: parser.stats,
+            formatted: parser.formatForSimulator(previewAggregated)
+        });
         preview.style.display = 'block';
 
         // Enable submit button
@@ -176,8 +190,34 @@ async function handleFormSubmit(e) {
         progressText.textContent = 'Prijsdata laden...';
         progressBar.style.width = '5%';
 
-        const year = parsedData.stats.year;
+        const year = parsedData.year;
         const pricesData = await loadPriceData(year);
+
+        // Detect the finest interval in price data
+        const priceInterval = detectFinestPriceInterval(pricesData);
+        console.log(`Fijnste prijsdata interval: ${priceInterval} minuten`);
+
+        // Aggregate P1 data to match the finest price interval
+        progressText.textContent = `P1 data aggregeren naar ${priceInterval} min intervallen...`;
+        progressBar.style.width = '8%';
+        const aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, priceInterval);
+        parsedData.parser.calculateStats();
+        const formattedData = parsedData.parser.formatForSimulator(aggregatedData);
+
+        console.log(`P1 data geaggregeerd (${formattedData.length} intervals)`);
+
+        // Trim P1 data to available price data range
+        const trimmedData = trimToAvailablePrices(formattedData, pricesData);
+
+        if (trimmedData.trimmed) {
+            const originalEnd = new Date(parsedData.lastTimestamp).toLocaleDateString('nl-NL');
+            const newEnd = new Date(trimmedData.lastDate).toLocaleDateString('nl-NL');
+            console.warn(`P1 data afgekapt: ${originalEnd} → ${newEnd} (prijsdata niet beschikbaar)`);
+
+            // Show warning to user
+            const warning = `Let op: P1 data loopt tot ${originalEnd}, maar prijsdata is alleen beschikbaar tot ${newEnd}. Simulatie uitgevoerd tot ${newEnd}.`;
+            alert(warning);
+        }
 
         // Build configurations
         const batteryConfig = {
@@ -200,13 +240,14 @@ async function handleFormSubmit(e) {
             sell: fixedSellPrice
         };
 
-        // Create simulator
+        // Create simulator with detected interval
         const simulator = new CustomDataSimulator(
             batteryConfig,
             priceConfig,
             fixedPriceConfig,
-            parsedData.formatted,
-            pricesData
+            trimmedData.data,
+            pricesData,
+            priceInterval  // Use detected interval (15 or 60)
         );
 
         // Run simulation
@@ -254,6 +295,67 @@ async function loadPriceData(year) {
     }
     const data = await response.json();
     return data.prices;
+}
+
+/**
+ * Detect the finest interval in price data by checking time differences
+ * Returns 15 if any quarterly data is found, otherwise 60
+ */
+function detectFinestPriceInterval(pricesData) {
+    if (!pricesData || pricesData.length < 2) {
+        return 60; // Default to hourly
+    }
+
+    // Check intervals - if ANY are ≤ 15 minutes, we have quarterly data
+    for (let i = 1; i < Math.min(pricesData.length, 100); i++) {
+        const prev = new Date(pricesData[i - 1].timestamp);
+        const curr = new Date(pricesData[i].timestamp);
+        const diffMs = curr - prev;
+
+        // If we find a 15-minute interval, use quarterly for everything
+        if (diffMs <= 15 * 60 * 1000) {
+            return 15;
+        }
+    }
+
+    return 60; // All hourly
+}
+
+/**
+ * Trim P1 data to match available price data
+ * Returns only P1 data points that have corresponding prices
+ */
+function trimToAvailablePrices(p1Data, pricesData) {
+    if (!pricesData || pricesData.length === 0) {
+        throw new Error('Geen prijsdata beschikbaar');
+    }
+
+    // Get last available price timestamp
+    const lastPriceDate = new Date(pricesData[pricesData.length - 1].timestamp);
+    const firstPriceDate = new Date(pricesData[0].timestamp);
+
+    // Filter P1 data to only include timestamps within price data range
+    const trimmedData = p1Data.filter(row => {
+        const rowDate = new Date(row.timestamp);
+        return rowDate >= firstPriceDate && rowDate <= lastPriceDate;
+    });
+
+    if (trimmedData.length === 0) {
+        throw new Error('Geen overlap tussen P1 data en prijsdata');
+    }
+
+    // Check if we actually removed significant data
+    // More than 5% removed = meaningful trimming
+    const removalRatio = (p1Data.length - trimmedData.length) / p1Data.length;
+    const wasTrimmed = removalRatio > 0.05;
+    const lastDate = trimmedData[trimmedData.length - 1].timestamp;
+
+    return {
+        data: trimmedData,
+        trimmed: wasTrimmed,
+        lastDate: lastDate,
+        removedRows: p1Data.length - trimmedData.length
+    };
 }
 
 /**

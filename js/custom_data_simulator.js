@@ -3,12 +3,14 @@
  */
 
 class CustomDataSimulator {
-    constructor(batteryConfig, priceConfig, fixedPriceConfig, gridFlowData, pricesData) {
+    constructor(batteryConfig, priceConfig, fixedPriceConfig, gridFlowData, pricesData, dataInterval = 60) {
         this.batteryConfig = batteryConfig;
         this.priceConfig = priceConfig;
         this.fixedPriceConfig = fixedPriceConfig;
-        this.gridFlowData = gridFlowData;  // Hourly net grid flows from P1 data
+        this.gridFlowData = gridFlowData;  // Net grid flows from P1 data (matched to price interval)
         this.pricesData = pricesData;       // EPEX prices
+        this.dataInterval = dataInterval;   // Data interval in minutes (15 or 60, matches prices)
+        this.durationHours = dataInterval / 60;  // 0.25 for quarterly, 1.0 for hourly
     }
 
     /**
@@ -129,7 +131,7 @@ class CustomDataSimulator {
             if (flow.netGridFlow < 0) {
                 // Surplus (export): try to charge battery
                 const availableSurplus = -flow.netGridFlow;
-                const [dcToBattery, acFromGrid] = battery.charge(availableSurplus, 1.0);
+                const [dcToBattery, acFromGrid] = battery.charge(availableSurplus, this.durationHours);
                 if (dcToBattery > 0.001) {
                     actualCharge = acFromGrid;
                     totalCharged += dcToBattery;
@@ -137,7 +139,7 @@ class CustomDataSimulator {
             } else if (flow.netGridFlow > 0) {
                 // Deficit (import): try to discharge battery
                 const neededPower = flow.netGridFlow;
-                const [dcFromBattery, acToGrid] = battery.discharge(neededPower, 1.0);
+                const [dcFromBattery, acToGrid] = battery.discharge(neededPower, this.durationHours);
                 if (dcFromBattery > 0.001) {
                     actualDischarge = acToGrid;
                     totalDischarged += dcFromBattery;
@@ -283,8 +285,10 @@ class CustomDataSimulator {
         let currentHour = 0;
 
         while (currentHour < this.gridFlowData.length) {
-            // Get 35-hour window for day-ahead optimization (13:00 - 13:00 next day + 11 hours)
-            const windowEnd = Math.min(currentHour + 35, this.gridFlowData.length);
+            // Get window for day-ahead optimization
+            // 35 hours for hourly (35 intervals), 35 hours for quarterly (140 intervals)
+            const windowSize = this.dataInterval === 15 ? 140 : 35;
+            const windowEnd = Math.min(currentHour + windowSize, this.gridFlowData.length);
             const window = this.gridFlowData.slice(currentHour, windowEnd);
 
             // Get prices for this window
@@ -326,7 +330,8 @@ class CustomDataSimulator {
             });
 
             // Optimize battery schedule for this window with forecast
-            const planActions = await optimizer.optimize(windowPrices, battery.socKwh, 'hourly', windowForecast);
+            const intervalType = this.dataInterval === 15 ? 'quarterly' : 'hourly';
+            const planActions = await optimizer.optimize(windowPrices, battery.socKwh, intervalType, windowForecast);
 
             // Convert to Map for fast lookup
             const currentPlan = new Map();
@@ -334,8 +339,10 @@ class CustomDataSimulator {
                 currentPlan.set(action.timestamp, action);
             }
 
-            // Execute first 24 hours of schedule (or until next 13:00)
-            const executeHours = Math.min(24, windowEnd - currentHour);
+            // Execute first 24 hours of schedule
+            // 24 hours for hourly (24 intervals), 24 hours for quarterly (96 intervals)
+            const executeSize = this.dataInterval === 15 ? 96 : 24;
+            const executeHours = Math.min(executeSize, windowEnd - currentHour);
 
             for (let h = 0; h < executeHours; h++) {
                 const flow = this.gridFlowData[currentHour + h];
@@ -359,13 +366,13 @@ class CustomDataSimulator {
                     const plannedAction = currentPlan.get(currentTs);
 
                     if (plannedAction.action === 'charge') {
-                        const [dcToBattery, acFromGrid] = battery.charge(plannedAction.energyKwh, 1.0);
+                        const [dcToBattery, acFromGrid] = battery.charge(plannedAction.energyKwh, this.durationHours);
                         if (dcToBattery > 0.001) {
                             actualCharge = acFromGrid;
                             totalCharged += dcToBattery;
                         }
                     } else if (plannedAction.action === 'discharge') {
-                        const [dcFromBattery, acToGrid] = battery.discharge(plannedAction.energyKwh, 1.0);
+                        const [dcFromBattery, acToGrid] = battery.discharge(plannedAction.energyKwh, this.durationHours);
                         if (dcFromBattery > 0.001) {
                             actualDischarge = acToGrid;
                             totalDischarged += dcFromBattery;
@@ -440,11 +447,11 @@ class CustomDataSimulator {
 
     /**
      * Find EPEX price for given timestamp
+     * P1 data and price data are already on the same interval, so exact match
      */
     findPrice(timestamp) {
         const ts = new Date(timestamp);
 
-        // Find price entry matching this hour
         return this.pricesData.find(p => {
             const priceTime = new Date(p.timestamp);
             return priceTime.getTime() === ts.getTime();
