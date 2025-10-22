@@ -5,8 +5,11 @@
 // Global state
 let parsedData = null;
 let currentResults = null;
+let currentSimulator = null;  // For drill-down navigation
+let currentMonthlySummaries = null;  // For drill-down navigation
 let costsChart = null;
 let gridFlowsChart = null;
+let timestepChart = null;  // For drill-down timestep chart
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -267,13 +270,17 @@ async function handleFormSubmit(e) {
         // Hide progress
         progressContainer.style.display = 'none';
 
-        // Display results
-        displayResults(results, {
+        // Store for drill-down navigation
+        currentSimulator = simulator;
+        currentMonthlySummaries = {
             fixedNoBattery: fixedNoBatteryMonthly,
             fixedWithBattery: fixedWithBatteryMonthly,
             dynamicNoBattery: dynamicNoBatteryMonthly,
             dynamicWithBattery: dynamicWithBatteryMonthly
-        });
+        };
+
+        // Display results
+        displayResults(results, currentMonthlySummaries);
 
     } catch (error) {
         console.error('Simulatie fout:', error);
@@ -671,6 +678,7 @@ function fillMonthlyTable(monthlySummaries) {
         const totalSavings = fixedNoBat.cost - dynWithBat.cost;
 
         const row = document.createElement('tr');
+        row.className = 'clickable-row';
         row.innerHTML = `
             <td>${fixedNoBat.monthName}</td>
             <td class="${fixedNoBat.cost >= 0 ? 'profit-negative' : 'profit-positive'}">€${fixedNoBat.cost.toFixed(2)}</td>
@@ -679,6 +687,430 @@ function fillMonthlyTable(monthlySummaries) {
             <td>${dynWithBat.gridImport.toFixed(0)}</td>
             <td>${dynWithBat.gridExport.toFixed(0)}</td>
         `;
+
+        // Make row clickable to drill down to daily view
+        const monthKey = `${fixedNoBat.year}-${String(fixedNoBat.month).padStart(2, '0')}`;
+        row.addEventListener('click', () => showMonthDetail(monthKey));
+
         tbody.appendChild(row);
     }
 }
+
+/**
+ * ====================
+ * Drill-down Navigation
+ * ====================
+ */
+
+/**
+ * Show daily detail for a specific month
+ */
+function showMonthDetail(monthKey) {
+    if (!currentSimulator || !currentResults) return;
+
+    // Get daily summary for this month
+    const dailySummary = currentSimulator.getDailySummary(
+        monthKey,
+        currentResults.dynamicWithBattery,
+        currentResults.fixedNoBattery
+    );
+
+    if (!dailySummary || dailySummary.length === 0) {
+        alert('Geen data beschikbaar voor deze maand');
+        return;
+    }
+
+    // Hide results, show detail view
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('detailView').style.display = 'block';
+    document.getElementById('detailTitle').textContent = `Details voor ${monthKey}`;
+
+    // Show daily view, hide timestep view
+    document.getElementById('dailyView').style.display = 'block';
+    document.getElementById('timestepView').style.display = 'none';
+
+    // Show month navigation, hide day navigation
+    document.getElementById('monthNavigation').style.display = 'flex';
+    document.getElementById('dayNavigation').style.display = 'none';
+
+    // Fill daily table
+    const tbody = document.getElementById('dailyTableBody');
+    tbody.innerHTML = '';
+
+    for (const day of dailySummary) {
+        const row = document.createElement('tr');
+        row.className = 'clickable-row';
+        row.innerHTML = `
+            <td>${day.dateFormatted}</td>
+            <td class="${day.savings >= 0 ? 'profit-positive' : 'profit-negative'}">€${day.savings.toFixed(2)}</td>
+            <td>${day.cycles.toFixed(2)}</td>
+            <td>${day.gridImport.toFixed(0)}</td>
+            <td>${day.gridExport.toFixed(0)}</td>
+            <td>${day.minSoc.toFixed(0)}% - ${day.maxSoc.toFixed(0)}%</td>
+        `;
+
+        row.addEventListener('click', () => showDayDetail(day.date));
+        tbody.appendChild(row);
+    }
+
+    // Setup month navigation
+    const allMonths = currentMonthlySummaries.fixedNoBattery.map(m =>
+        `${m.year}-${String(m.month).padStart(2, '0')}`
+    );
+    const currentIndex = allMonths.indexOf(monthKey);
+
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+
+    prevMonthBtn.disabled = currentIndex <= 0;
+    nextMonthBtn.disabled = currentIndex >= allMonths.length - 1;
+
+    prevMonthBtn.onclick = () => {
+        if (currentIndex > 0) {
+            showMonthDetail(allMonths[currentIndex - 1]);
+        }
+    };
+
+    nextMonthBtn.onclick = () => {
+        if (currentIndex < allMonths.length - 1) {
+            showMonthDetail(allMonths[currentIndex + 1]);
+        }
+    };
+
+    // Scroll to top
+    document.getElementById('detailView').scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
+ * Show timestep (hourly/quarterly) detail for a specific day
+ */
+function showDayDetail(dateKey) {
+    if (!currentSimulator || !currentResults) return;
+
+    // Get timestep data for this day
+    const timestepData = currentSimulator.getTimestepSummary(
+        dateKey,
+        currentResults.dynamicWithBattery
+    );
+
+    if (!timestepData || timestepData.length === 0) {
+        alert('Geen data beschikbaar voor deze dag');
+        return;
+    }
+
+    // Update title
+    const date = new Date(dateKey);
+    const dateFormatted = date.toLocaleDateString('nl-NL', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    document.getElementById('detailTitle').textContent = dateFormatted;
+
+    // Hide daily view, show timestep view
+    document.getElementById('dailyView').style.display = 'none';
+    document.getElementById('timestepView').style.display = 'block';
+
+    // Show day navigation, hide month navigation
+    document.getElementById('dayNavigation').style.display = 'flex';
+    document.getElementById('monthNavigation').style.display = 'none';
+
+    // Create timestep chart
+    createTimestepChart(timestepData);
+
+    // Setup day navigation (all days across all months)
+    const allDays = [];
+    for (const month of currentMonthlySummaries.fixedNoBattery) {
+        const monthKey = `${month.year}-${String(month.month).padStart(2, '0')}`;
+        const monthDays = currentSimulator.getDailySummary(
+            monthKey,
+            currentResults.dynamicWithBattery,
+            currentResults.fixedNoBattery
+        );
+        allDays.push(...monthDays.map(d => d.date));
+    }
+
+    const currentIndex = allDays.indexOf(dateKey);
+
+    const prevDayBtn = document.getElementById('prevDay');
+    const nextDayBtn = document.getElementById('nextDay');
+    const prevWeekBtn = document.getElementById('prevWeek');
+    const nextWeekBtn = document.getElementById('nextWeek');
+    const prevMonthDayBtn = document.getElementById('prevMonthDay');
+    const nextMonthDayBtn = document.getElementById('nextMonthDay');
+
+    // Disable buttons at boundaries
+    prevDayBtn.disabled = currentIndex <= 0;
+    nextDayBtn.disabled = currentIndex >= allDays.length - 1;
+    prevWeekBtn.disabled = currentIndex < 7;
+    nextWeekBtn.disabled = currentIndex >= allDays.length - 7;
+    prevMonthDayBtn.disabled = currentIndex < 30;
+    nextMonthDayBtn.disabled = currentIndex >= allDays.length - 30;
+
+    // Button handlers
+    prevDayBtn.onclick = () => {
+        if (currentIndex > 0) showDayDetail(allDays[currentIndex - 1]);
+    };
+    nextDayBtn.onclick = () => {
+        if (currentIndex < allDays.length - 1) showDayDetail(allDays[currentIndex + 1]);
+    };
+    prevWeekBtn.onclick = () => {
+        if (currentIndex >= 7) showDayDetail(allDays[currentIndex - 7]);
+    };
+    nextWeekBtn.onclick = () => {
+        if (currentIndex < allDays.length - 7) showDayDetail(allDays[currentIndex + 7]);
+    };
+    prevMonthDayBtn.onclick = () => {
+        if (currentIndex >= 30) showDayDetail(allDays[currentIndex - 30]);
+    };
+    nextMonthDayBtn.onclick = () => {
+        if (currentIndex < allDays.length - 30) showDayDetail(allDays[currentIndex + 30]);
+    };
+
+    // Scroll to top
+    document.getElementById('detailView').scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
+ * Close detail view and return to main results
+ */
+function closeDetailView() {
+    document.getElementById('detailView').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+
+    // Clean up chart
+    if (timestepChart) {
+        timestepChart.destroy();
+        timestepChart = null;
+    }
+
+    // Scroll to results
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+}
+
+/**
+ * Create timestep chart for a specific day
+ */
+function createTimestepChart(timestepData) {
+    // Destroy existing chart
+    if (timestepChart) {
+        timestepChart.destroy();
+    }
+
+    const ctx = document.getElementById('timestepChart').getContext('2d');
+
+    // Format labels with time
+    const labels = timestepData.map((d, i) => {
+        const date = new Date(d.timestamp);
+        const timeStr = date.toLocaleTimeString('nl-NL', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        return timeStr;
+    });
+
+    // Detect quarterly vs hourly data
+    const isQuarterly = timestepData.length >= 96;
+
+    // Extract data series
+    const socData = timestepData.map(d => d.batterySocPct);
+    const gridImportData = timestepData.map(d => d.gridImport);
+    const gridExportData = timestepData.map(d => -d.gridExport);  // Negative for visualization
+    const batteryChargeData = timestepData.map(d => -d.batteryCharge);  // Negative = charging
+    const batteryDischargeData = timestepData.map(d => d.batteryDischarge);
+    const buyPriceData = timestepData.map(d => d.buyPrice * 100);  // Convert to €ct/kWh
+    const sellPriceData = timestepData.map(d => d.sellPrice * 100);
+
+    // Check if prices differ (saldering vs non-saldering)
+    const pricesAreDifferent = timestepData.some(d =>
+        Math.abs(d.buyPrice - d.sellPrice) > 0.0001
+    );
+
+    // Create chart
+    timestepChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'SoC (%)',
+                    data: socData,
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    yAxisID: 'ySoc',
+                    tension: 0.1,
+                    fill: true
+                },
+                {
+                    label: 'Grid Import (kWh)',
+                    data: gridImportData,
+                    borderColor: 'rgba(220, 38, 38, 1)',
+                    backgroundColor: 'rgba(220, 38, 38, 0.3)',
+                    borderWidth: 1,
+                    yAxisID: 'yEnergy',
+                    type: 'bar',
+                    order: 3
+                },
+                {
+                    label: 'Grid Export (kWh)',
+                    data: gridExportData,
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.3)',
+                    borderWidth: 1,
+                    yAxisID: 'yEnergy',
+                    type: 'bar',
+                    order: 3
+                },
+                {
+                    label: 'Bat. Charge (kWh)',
+                    data: batteryChargeData,
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+                    borderWidth: 1,
+                    yAxisID: 'yEnergy',
+                    type: 'bar',
+                    order: 2
+                },
+                {
+                    label: 'Bat. Discharge (kWh)',
+                    data: batteryDischargeData,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.3)',
+                    borderWidth: 1,
+                    yAxisID: 'yEnergy',
+                    type: 'bar',
+                    order: 2
+                },
+                {
+                    label: pricesAreDifferent ? 'Inkoop (€ct/kWh)' : 'Prijs (€ct/kWh)',
+                    data: buyPriceData,
+                    borderColor: 'rgba(107, 114, 128, 1)',
+                    backgroundColor: 'rgba(107, 114, 128, 0.05)',
+                    borderWidth: 2,
+                    yAxisID: 'yPrice',
+                    tension: 0.1,
+                    fill: pricesAreDifferent,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+
+                            const value = Math.abs(context.parsed.y);
+                            if (context.dataset.yAxisID === 'ySoc') {
+                                label += value.toFixed(1) + '%';
+                            } else if (context.dataset.yAxisID === 'yEnergy') {
+                                label += value.toFixed(2) + ' kWh';
+                            } else if (context.dataset.yAxisID === 'yPrice') {
+                                label += value.toFixed(2) + ' €ct/kWh';
+                            }
+
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: isQuarterly ? 'Tijd (kwartier)' : 'Tijd (uur)'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: isQuarterly ? 24 : 24
+                    }
+                },
+                ySoc: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'SoC (%)'
+                    },
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                yEnergy: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Energie (kWh)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return Math.abs(value).toFixed(1) + ' kWh';
+                        }
+                    }
+                },
+                yPrice: {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Prijs (€ct/kWh)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1) + ' ct';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Add sell price line if different from buy price
+    if (pricesAreDifferent) {
+        timestepChart.data.datasets.push({
+            label: 'Teruglevering (€ct/kWh)',
+            data: sellPriceData,
+            borderColor: 'rgba(156, 163, 175, 1)',
+            backgroundColor: 'rgba(156, 163, 175, 0.05)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            yAxisID: 'yPrice',
+            tension: 0.1,
+            fill: '-1',
+            order: 1
+        });
+        timestepChart.update();
+    }
+}
+
+// Setup close button event listener
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('closeDetail');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeDetailView);
+    }
+});

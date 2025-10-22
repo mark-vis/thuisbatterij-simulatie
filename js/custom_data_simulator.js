@@ -498,4 +498,112 @@ class CustomDataSimulator {
                 return a.month - b.month;
             });
     }
+
+    /**
+     * Get daily summary for a specific month (for drill-down view)
+     * Returns daily aggregations for the "dynamic with battery" scenario
+     */
+    getDailySummary(monthKey, dynamicWithBatteryResults, fixedNoBatteryResults) {
+        const dailyMap = new Map();
+
+        // Process dynamic with battery results
+        for (const hour of dynamicWithBatteryResults.hourlyResults) {
+            const date = new Date(hour.timestamp);
+            const dateKey = date.toISOString().split('T')[0];  // YYYY-MM-DD
+            const hourMonthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            // Only include this month
+            if (hourMonthKey !== monthKey) continue;
+
+            if (!dailyMap.has(dateKey)) {
+                dailyMap.set(dateKey, {
+                    date: dateKey,
+                    dateFormatted: date.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' }),
+                    cost: 0,
+                    gridImport: 0,
+                    gridExport: 0,
+                    batteryCharge: 0,
+                    batteryDischarge: 0,
+                    minSoc: 100,
+                    maxSoc: 0,
+                    costNoBattery: 0
+                });
+            }
+
+            const dayData = dailyMap.get(dateKey);
+            dayData.cost += hour.cost;
+            dayData.gridImport += hour.gridImport;
+            dayData.gridExport += hour.gridExport;
+            dayData.batteryCharge += hour.batteryCharge || 0;
+            dayData.batteryDischarge += hour.batteryDischarge || 0;
+
+            // Track SoC range
+            const socPct = (hour.batterySoc / this.batteryConfig.capacityKwh) * 100;
+            dayData.minSoc = Math.min(dayData.minSoc, socPct);
+            dayData.maxSoc = Math.max(dayData.maxSoc, socPct);
+        }
+
+        // Add fixed no battery costs for comparison
+        for (const hour of fixedNoBatteryResults.hourlyResults) {
+            const date = new Date(hour.timestamp);
+            const dateKey = date.toISOString().split('T')[0];
+            const hourMonthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (hourMonthKey !== monthKey) continue;
+            if (!dailyMap.has(dateKey)) continue;
+
+            const dayData = dailyMap.get(dateKey);
+            dayData.costNoBattery += hour.cost;
+        }
+
+        // Calculate cycles and savings
+        const dailyArray = Array.from(dailyMap.values()).map(day => {
+            const avgThroughput = (day.batteryCharge + day.batteryDischarge) / 2;
+            const cycles = avgThroughput / this.batteryConfig.capacityKwh;
+            const savings = day.costNoBattery - day.cost;
+
+            return {
+                ...day,
+                cycles,
+                savings
+            };
+        });
+
+        return dailyArray.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    /**
+     * Get timestep (hourly/quarterly) data for a specific day (for drill-down view)
+     * Returns timestep data for the "dynamic with battery" scenario
+     */
+    getTimestepSummary(dateKey, dynamicWithBatteryResults) {
+        const timesteps = [];
+
+        for (const hour of dynamicWithBatteryResults.hourlyResults) {
+            const date = new Date(hour.timestamp);
+            const hourDateKey = date.toISOString().split('T')[0];
+
+            // Only include this day
+            if (hourDateKey !== dateKey) continue;
+
+            const socPct = (hour.batterySoc / this.batteryConfig.capacityKwh) * 100;
+
+            timesteps.push({
+                timestamp: hour.timestamp,
+                netGridFlow: hour.netGridFlow,
+                netGridFlowAfterBattery: hour.netGridFlowAfterBattery,
+                gridImport: hour.gridImport,
+                gridExport: hour.gridExport,
+                batteryCharge: hour.batteryCharge || 0,
+                batteryDischarge: hour.batteryDischarge || 0,
+                batterySocKwh: hour.batterySoc,
+                batterySocPct: socPct,
+                cost: hour.cost,
+                buyPrice: hour.buyPrice,
+                sellPrice: hour.sellPrice
+            });
+        }
+
+        return timesteps.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
 }

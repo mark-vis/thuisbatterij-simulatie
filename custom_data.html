@@ -262,6 +262,54 @@
                 </table>
             </div>
         </section>
+
+        <!-- Detail view (hidden by default) -->
+        <section id="detailView" class="detail-view" style="display: none;">
+            <div class="detail-header">
+                <button id="closeDetail" class="btn-back">← Terug naar overzicht</button>
+                <h3 id="detailTitle"></h3>
+
+                <!-- Month navigation -->
+                <div class="detail-nav" id="monthNavigation" style="display: none;">
+                    <button id="prevMonth" class="btn-nav">← Vorige maand</button>
+                    <button id="nextMonth" class="btn-nav">Volgende maand →</button>
+                </div>
+
+                <!-- Day navigation -->
+                <div class="detail-nav" id="dayNavigation" style="display: none;">
+                    <button id="prevMonthDay" class="btn-nav">←←← Maand</button>
+                    <button id="prevWeek" class="btn-nav">←← Week</button>
+                    <button id="prevDay" class="btn-nav">← Vorige dag</button>
+                    <button id="nextDay" class="btn-nav">Volgende dag →</button>
+                    <button id="nextWeek" class="btn-nav">Week →→</button>
+                    <button id="nextMonthDay" class="btn-nav">Maand →→→</button>
+                </div>
+            </div>
+
+            <!-- Daily table view -->
+            <div id="dailyView" class="table-container" style="display: none;">
+                <table id="dailyTable">
+                    <thead>
+                        <tr>
+                            <th>Dag</th>
+                            <th>Besparing (€)</th>
+                            <th>Cycli</th>
+                            <th>Grid Import (kWh)</th>
+                            <th>Grid Export (kWh)</th>
+                            <th>SoC Min-Max (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Timestep chart view -->
+            <div id="timestepView" class="chart-box" style="display: none;">
+                <div style="height: 500px;">
+                    <canvas id="timestepChart"></canvas>
+                </div>
+            </div>
+        </section>
         </div><!-- .layout-two-column -->
     </main>
 
