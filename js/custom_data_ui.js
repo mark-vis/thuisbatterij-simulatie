@@ -398,6 +398,60 @@ function buildPriceConfig(priceMode, formData) {
 }
 
 /**
+ * Calculate price statistics (average prices and export at negative prices)
+ */
+function calculatePriceStatistics(dynNoBat, dynWithBat) {
+    // Calculate weighted average buy price (weighted by import energy)
+    let totalImportEnergy = 0;
+    let weightedBuyPrice = 0;
+
+    for (const hour of dynNoBat.hourlyResults) {
+        if (hour.gridImport > 0) {
+            totalImportEnergy += hour.gridImport;
+            weightedBuyPrice += hour.gridImport * hour.buyPrice;
+        }
+    }
+
+    const avgBuyPrice = totalImportEnergy > 0 ? weightedBuyPrice / totalImportEnergy : 0;
+
+    // Calculate weighted average sell price (weighted by export energy)
+    let totalExportEnergy = 0;
+    let weightedSellPrice = 0;
+
+    for (const hour of dynNoBat.hourlyResults) {
+        if (hour.gridExport > 0) {
+            totalExportEnergy += hour.gridExport;
+            weightedSellPrice += hour.gridExport * hour.sellPrice;
+        }
+    }
+
+    const avgSellPrice = totalExportEnergy > 0 ? weightedSellPrice / totalExportEnergy : 0;
+
+    // Calculate export at negative sell prices (without battery)
+    let exportAtNegPriceNoBat = 0;
+    for (const hour of dynNoBat.hourlyResults) {
+        if (hour.sellPrice < 0 && hour.gridExport > 0) {
+            exportAtNegPriceNoBat += hour.gridExport;
+        }
+    }
+
+    // Calculate export at negative sell prices (with battery)
+    let exportAtNegPriceWithBat = 0;
+    for (const hour of dynWithBat.hourlyResults) {
+        if (hour.sellPrice < 0 && hour.gridExport > 0) {
+            exportAtNegPriceWithBat += hour.gridExport;
+        }
+    }
+
+    return {
+        avgBuyPrice,
+        avgSellPrice,
+        exportAtNegPriceNoBat,
+        exportAtNegPriceWithBat
+    };
+}
+
+/**
  * Display simulation results
  */
 function displayResults(results, monthlySummaries) {
@@ -421,6 +475,13 @@ function displayResults(results, monthlySummaries) {
     document.getElementById('savingsPerCycle').textContent = '€' + (totalSavings / dynWithBat.cycles).toFixed(2);
     document.getElementById('gridImport').textContent = dynWithBat.totalImport.toFixed(0) + ' kWh';
     document.getElementById('gridExport').textContent = dynWithBat.totalExport.toFixed(0) + ' kWh';
+
+    // Calculate price statistics for dynamic scenarios
+    const priceStats = calculatePriceStatistics(dynNoBat, dynWithBat);
+    document.getElementById('avgBuyPrice').textContent = '€' + priceStats.avgBuyPrice.toFixed(3) + '/kWh';
+    document.getElementById('avgSellPrice').textContent = '€' + priceStats.avgSellPrice.toFixed(3) + '/kWh';
+    document.getElementById('exportAtNegPriceNoBat').textContent = priceStats.exportAtNegPriceNoBat.toFixed(1) + ' kWh';
+    document.getElementById('exportAtNegPriceWithBat').textContent = priceStats.exportAtNegPriceWithBat.toFixed(1) + ' kWh';
 
     // Fill savings detail table
     fillSavingsDetailTable(results);
