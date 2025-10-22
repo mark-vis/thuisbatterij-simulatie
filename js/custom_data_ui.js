@@ -399,35 +399,60 @@ function buildPriceConfig(priceMode, formData) {
 
 /**
  * Calculate price statistics (average prices and export at negative prices)
+ * Compares scenarios without battery vs with battery
  */
 function calculatePriceStatistics(dynNoBat, dynWithBat) {
-    // Calculate weighted average buy price for scenario WITH battery
-    // (weighted by import energy in the with-battery scenario)
-    let totalImportEnergy = 0;
-    let weightedBuyPrice = 0;
+    // Calculate weighted average buy price WITHOUT battery
+    let totalImportEnergyNoBat = 0;
+    let weightedBuyPriceNoBat = 0;
+
+    for (const hour of dynNoBat.hourlyResults) {
+        if (hour.gridImport > 0) {
+            totalImportEnergyNoBat += hour.gridImport;
+            weightedBuyPriceNoBat += hour.gridImport * hour.buyPrice;
+        }
+    }
+
+    const avgBuyPriceNoBat = totalImportEnergyNoBat > 0 ? weightedBuyPriceNoBat / totalImportEnergyNoBat : 0;
+
+    // Calculate weighted average buy price WITH battery
+    let totalImportEnergyWithBat = 0;
+    let weightedBuyPriceWithBat = 0;
 
     for (const hour of dynWithBat.hourlyResults) {
         if (hour.gridImport > 0) {
-            totalImportEnergy += hour.gridImport;
-            weightedBuyPrice += hour.gridImport * hour.buyPrice;
+            totalImportEnergyWithBat += hour.gridImport;
+            weightedBuyPriceWithBat += hour.gridImport * hour.buyPrice;
         }
     }
 
-    const avgBuyPrice = totalImportEnergy > 0 ? weightedBuyPrice / totalImportEnergy : 0;
+    const avgBuyPriceWithBat = totalImportEnergyWithBat > 0 ? weightedBuyPriceWithBat / totalImportEnergyWithBat : 0;
 
-    // Calculate weighted average sell price for scenario WITH battery
-    // (weighted by export energy in the with-battery scenario)
-    let totalExportEnergy = 0;
-    let weightedSellPrice = 0;
+    // Calculate weighted average sell price WITHOUT battery
+    let totalExportEnergyNoBat = 0;
+    let weightedSellPriceNoBat = 0;
+
+    for (const hour of dynNoBat.hourlyResults) {
+        if (hour.gridExport > 0) {
+            totalExportEnergyNoBat += hour.gridExport;
+            weightedSellPriceNoBat += hour.gridExport * hour.sellPrice;
+        }
+    }
+
+    const avgSellPriceNoBat = totalExportEnergyNoBat > 0 ? weightedSellPriceNoBat / totalExportEnergyNoBat : 0;
+
+    // Calculate weighted average sell price WITH battery
+    let totalExportEnergyWithBat = 0;
+    let weightedSellPriceWithBat = 0;
 
     for (const hour of dynWithBat.hourlyResults) {
         if (hour.gridExport > 0) {
-            totalExportEnergy += hour.gridExport;
-            weightedSellPrice += hour.gridExport * hour.sellPrice;
+            totalExportEnergyWithBat += hour.gridExport;
+            weightedSellPriceWithBat += hour.gridExport * hour.sellPrice;
         }
     }
 
-    const avgSellPrice = totalExportEnergy > 0 ? weightedSellPrice / totalExportEnergy : 0;
+    const avgSellPriceWithBat = totalExportEnergyWithBat > 0 ? weightedSellPriceWithBat / totalExportEnergyWithBat : 0;
 
     // Calculate export at negative sell prices (without battery)
     let exportAtNegPriceNoBat = 0;
@@ -446,8 +471,10 @@ function calculatePriceStatistics(dynNoBat, dynWithBat) {
     }
 
     return {
-        avgBuyPrice,
-        avgSellPrice,
+        avgBuyPriceNoBat,
+        avgBuyPriceWithBat,
+        avgSellPriceNoBat,
+        avgSellPriceWithBat,
         exportAtNegPriceNoBat,
         exportAtNegPriceWithBat
     };
@@ -480,10 +507,25 @@ function displayResults(results, monthlySummaries) {
 
     // Calculate price statistics for dynamic scenarios
     const priceStats = calculatePriceStatistics(dynNoBat, dynWithBat);
-    document.getElementById('avgBuyPrice').textContent = '€' + priceStats.avgBuyPrice.toFixed(3) + '/kWh';
-    document.getElementById('avgSellPrice').textContent = '€' + priceStats.avgSellPrice.toFixed(3) + '/kWh';
-    document.getElementById('exportAtNegPriceNoBat').textContent = priceStats.exportAtNegPriceNoBat.toFixed(1) + ' kWh';
-    document.getElementById('exportAtNegPriceWithBat').textContent = priceStats.exportAtNegPriceWithBat.toFixed(1) + ' kWh';
+
+    // Display average buy price (with battery as main value)
+    document.getElementById('avgBuyPrice').textContent = '€' + priceStats.avgBuyPriceWithBat.toFixed(3) + '/kWh';
+    document.getElementById('avgBuyPriceComparison').textContent =
+        `zonder bat: €${priceStats.avgBuyPriceNoBat.toFixed(3)} → met bat: €${priceStats.avgBuyPriceWithBat.toFixed(3)}`;
+
+    // Display average sell price (with battery as main value)
+    document.getElementById('avgSellPrice').textContent = '€' + priceStats.avgSellPriceWithBat.toFixed(3) + '/kWh';
+    document.getElementById('avgSellPriceComparison').textContent =
+        `zonder bat: €${priceStats.avgSellPriceNoBat.toFixed(3)} → met bat: €${priceStats.avgSellPriceWithBat.toFixed(3)}`;
+
+    // Display export at negative prices (with battery as main value)
+    document.getElementById('exportAtNegPrice').textContent = priceStats.exportAtNegPriceWithBat.toFixed(1) + ' kWh';
+    document.getElementById('exportAtNegPriceComparison').textContent =
+        `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(1)} kWh → met bat: ${priceStats.exportAtNegPriceWithBat.toFixed(1)} kWh`;
+
+    // Display savings from avoided negative export
+    const negExportSavings = priceStats.exportAtNegPriceNoBat - priceStats.exportAtNegPriceWithBat;
+    document.getElementById('exportAtNegPriceSavings').textContent = negExportSavings.toFixed(1) + ' kWh';
 
     // Fill savings detail table
     fillSavingsDetailTable(results);
