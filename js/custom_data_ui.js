@@ -456,17 +456,21 @@ function calculatePriceStatistics(dynNoBat, dynWithBat) {
 
     // Calculate export at negative sell prices (without battery)
     let exportAtNegPriceNoBat = 0;
+    let exportCostAtNegPriceNoBat = 0;  // Cost = negative revenue
     for (const hour of dynNoBat.hourlyResults) {
         if (hour.sellPrice < 0 && hour.gridExport > 0) {
             exportAtNegPriceNoBat += hour.gridExport;
+            exportCostAtNegPriceNoBat += hour.gridExport * hour.sellPrice;  // Negative price × positive export = negative value (cost)
         }
     }
 
     // Calculate export at negative sell prices (with battery)
     let exportAtNegPriceWithBat = 0;
+    let exportCostAtNegPriceWithBat = 0;
     for (const hour of dynWithBat.hourlyResults) {
         if (hour.sellPrice < 0 && hour.gridExport > 0) {
             exportAtNegPriceWithBat += hour.gridExport;
+            exportCostAtNegPriceWithBat += hour.gridExport * hour.sellPrice;
         }
     }
 
@@ -476,7 +480,9 @@ function calculatePriceStatistics(dynNoBat, dynWithBat) {
         avgSellPriceNoBat,
         avgSellPriceWithBat,
         exportAtNegPriceNoBat,
-        exportAtNegPriceWithBat
+        exportAtNegPriceWithBat,
+        exportCostAtNegPriceNoBat,
+        exportCostAtNegPriceWithBat
     };
 }
 
@@ -522,8 +528,14 @@ function displayResults(results, monthlySummaries) {
     document.getElementById('avgSellPriceComparison').textContent = `zonder bat: €${priceStats.avgSellPriceNoBat.toFixed(3)}`;
 
     // Display export at negative prices (with battery as main value, without battery for comparison)
-    document.getElementById('exportAtNegPrice').textContent = priceStats.exportAtNegPriceWithBat.toFixed(1) + ' kWh';
-    document.getElementById('exportAtNegPriceComparison').textContent = `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(1)} kWh`;
+    // Show both kWh and EUR cost (negative sell price means paying to export)
+    const costWithBat = Math.abs(priceStats.exportCostAtNegPriceWithBat);
+    const costNoBat = Math.abs(priceStats.exportCostAtNegPriceNoBat);
+
+    document.getElementById('exportAtNegPrice').textContent =
+        `${priceStats.exportAtNegPriceWithBat.toFixed(0)} kWh / €${costWithBat.toFixed(2)}`;
+    document.getElementById('exportAtNegPriceComparison').textContent =
+        `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(0)} kWh / €${costNoBat.toFixed(2)}`;
 
     // Fill savings detail table
     fillSavingsDetailTable(results);
