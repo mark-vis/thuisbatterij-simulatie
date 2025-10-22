@@ -508,24 +508,17 @@ function displayResults(results, monthlySummaries) {
     // Calculate price statistics for dynamic scenarios
     const priceStats = calculatePriceStatistics(dynNoBat, dynWithBat);
 
-    // Display average buy price (with battery as main value)
+    // Display average buy price (with battery as main value, without battery for comparison)
     document.getElementById('avgBuyPrice').textContent = '€' + priceStats.avgBuyPriceWithBat.toFixed(3) + '/kWh';
-    document.getElementById('avgBuyPriceComparison').textContent =
-        `zonder bat: €${priceStats.avgBuyPriceNoBat.toFixed(3)} → met bat: €${priceStats.avgBuyPriceWithBat.toFixed(3)}`;
+    document.getElementById('avgBuyPriceComparison').textContent = `zonder bat: €${priceStats.avgBuyPriceNoBat.toFixed(3)}`;
 
-    // Display average sell price (with battery as main value)
+    // Display average sell price (with battery as main value, without battery for comparison)
     document.getElementById('avgSellPrice').textContent = '€' + priceStats.avgSellPriceWithBat.toFixed(3) + '/kWh';
-    document.getElementById('avgSellPriceComparison').textContent =
-        `zonder bat: €${priceStats.avgSellPriceNoBat.toFixed(3)} → met bat: €${priceStats.avgSellPriceWithBat.toFixed(3)}`;
+    document.getElementById('avgSellPriceComparison').textContent = `zonder bat: €${priceStats.avgSellPriceNoBat.toFixed(3)}`;
 
-    // Display export at negative prices (with battery as main value)
+    // Display export at negative prices (with battery as main value, without battery for comparison)
     document.getElementById('exportAtNegPrice').textContent = priceStats.exportAtNegPriceWithBat.toFixed(1) + ' kWh';
-    document.getElementById('exportAtNegPriceComparison').textContent =
-        `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(1)} kWh → met bat: ${priceStats.exportAtNegPriceWithBat.toFixed(1)} kWh`;
-
-    // Display savings from avoided negative export
-    const negExportSavings = priceStats.exportAtNegPriceNoBat - priceStats.exportAtNegPriceWithBat;
-    document.getElementById('exportAtNegPriceSavings').textContent = negExportSavings.toFixed(1) + ' kWh';
+    document.getElementById('exportAtNegPriceComparison').textContent = `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(1)} kWh`;
 
     // Fill savings detail table
     fillSavingsDetailTable(results);
