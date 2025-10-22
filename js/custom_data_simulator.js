@@ -16,15 +16,19 @@ class CustomDataSimulator {
      */
     async simulateAll(progressCallback) {
         progressCallback(10, 'Scenario 1: Vast contract zonder batterij...');
+        await new Promise(resolve => setTimeout(resolve, 0));
         const fixedNoBattery = await this.simulateFixedContract();
 
         progressCallback(30, 'Scenario 2: Vast contract met batterij...');
+        await new Promise(resolve => setTimeout(resolve, 0));
         const fixedWithBattery = await this.simulateFixedWithBattery();
 
         progressCallback(50, 'Scenario 3: Dynamisch zonder batterij...');
+        await new Promise(resolve => setTimeout(resolve, 0));
         const dynamicNoBattery = await this.simulateDynamicNoBattery();
 
         progressCallback(70, 'Scenario 4: Dynamisch met batterij (MILP)...');
+        await new Promise(resolve => setTimeout(resolve, 0));
         const dynamicWithBattery = await this.simulateDynamicWithBattery(progressCallback);
 
         progressCallback(100, 'Simulatie voltooid');
@@ -81,6 +85,11 @@ class CustomDataSimulator {
                 buyPrice,
                 sellPrice
             });
+
+            // Yield to event loop every 500 iterations
+            if (i % 500 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
         }
 
         return {
@@ -169,6 +178,11 @@ class CustomDataSimulator {
                 buyPrice,
                 sellPrice
             });
+
+            // Yield to event loop every 500 iterations
+            if (i % 500 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
         }
 
         // Calculate cycles
@@ -237,6 +251,11 @@ class CustomDataSimulator {
                 buyPrice,
                 sellPrice
             });
+
+            // Yield to event loop every 500 iterations
+            if (i % 500 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
         }
 
         return {
@@ -397,8 +416,11 @@ class CustomDataSimulator {
             currentHour += executeHours;
 
             // Update progress
-            const progress = 50 + (currentHour / this.gridFlowData.length) * 50;
+            const progress = 70 + (currentHour / this.gridFlowData.length) * 30;
             progressCallback(progress, `Optimalisatie ${currentHour}/${this.gridFlowData.length} uur...`);
+
+            // Yield to event loop to update UI
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
 
         // Calculate cycles
