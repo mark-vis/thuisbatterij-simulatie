@@ -1,7 +1,7 @@
 {
   "name": "site",
   "version": "1.0.0",
-  "description": "Web-based simulatie tool voor het berekenen van potentiële winsten door arbitrage handel met een thuisbatterij op de EPEX Day-Ahead markt.",
+  "description": "Web-based simulatietool voor het berekenen van potentiële besparingen en winsten met een thuisbatterij. Ondersteunt arbitrage, PV + verbruik scenario's, geavanceerde analyse en eigen P1 meter data upload.",
   "main": "index.js",
   "directories": {
     "lib": "lib"

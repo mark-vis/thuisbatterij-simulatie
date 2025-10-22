@@ -160,11 +160,36 @@
         </section>
 
         <section>
+            <h3>Eigen P1 Data Upload</h3>
+            <p>De <strong>"Eigen Data"</strong> pagina ondersteunt upload van eigen P1 meter data:</p>
+
+            <h4>CSV Format</h4>
+            <p>Verwacht formaat: <code>time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh</code></p>
+            <p>Meterstanden zijn cumulatief. De simulator berekent automatisch de deltas tussen opeenvolgende metingen.</p>
+
+            <h4>Automatische Interval Detectie</h4>
+            <p>De parser detecteert automatisch het meetinterval (5 min, 10 min, 15 min, 60 min, etc.) en aggregeert naar het fijnste prijsdata interval:</p>
+            <ul>
+                <li><strong>2013-september 2025</strong>: 60 minuten (uurlijks)</li>
+                <li><strong>Oktober 2025-2025</strong>: 15 minuten (kwartier)</li>
+            </ul>
+
+            <h4>Drill-down Navigatie</h4>
+            <p>Net als de arbitrage simulatie biedt de P1 data pagina drill-down navigatie:</p>
+            <ol>
+                <li><strong>Maandoverzicht</strong>: Klik op een maand om dagdetails te zien</li>
+                <li><strong>Dagoverzicht</strong>: Klik op een dag om uur/kwartier grafiek te zien</li>
+                <li><strong>Timestep grafiek</strong>: Multi-axis chart met SoC, grid flows, battery flows en prijzen</li>
+            </ol>
+            <p>De grafiek toont automatisch uurlijkse of kwartier data afhankelijk van het prijsdata interval.</p>
+        </section>
+
+        <section>
             <h3>Beperkingen</h3>
             <ul>
                 <li>Geen onbalans of intraday markten</li>
                 <li>Arbitrage simulatie (index.html): Geen eigen verbruik of PV-productie</li>
-                <li>Basis simulaties (index.html, with_solar.html): Constante efficiency (instelbaar, standaard 89%, niet vermogensafhankelijk)</li>
+                <li>Basis simulaties (index.html, with_solar.html, custom_data.html): Constante efficiency (instelbaar, standaard 89%, niet vermogensafhankelijk)</li>
                 <li>Geavanceerde analyse (advanced.html): Vermogensafhankelijke efficiency curves (Victron MultiPlus 5000)</li>
             </ul>
         </section>

@@ -19,6 +19,7 @@ Web-based simulatietool voor het berekenen van potentiële besparingen en winste
 - ✅ EPEX Day-Ahead arbitrage (koop laag, verkoop hoog)
 - ✅ Maandelijks en dagelijks overzicht
 - ✅ Detail view per uur met SoC grafiek
+- ✅ Drill-down navigatie: maand → dag → uur
 
 ### Simulatie met PV (with_solar.html)
 - ✅ **Realistische scenario's** met zonnepanelen en huishoudelijk verbruik
@@ -34,6 +35,14 @@ Web-based simulatietool voor het berekenen van potentiële besparingen en winste
 - ✅ **Optimale configuratie**: Vind beste vermogen voor jouw situatie
 - ✅ **Heatmap visualisatie**: 2D grid van alle combinaties
 
+### Eigen P1 Data (custom_data.html)
+- ✅ **Upload eigen P1 meter data**: CSV format met import/export meterstanden
+- ✅ **Automatische interval detectie**: Ondersteunt 5 min, 15 min, 60 min, etc.
+- ✅ **Kwartier prijsdata ondersteuning**: Gebruikt 15-min of 60-min prijzen vanaf oktober 2025
+- ✅ **4 scenario's vergelijking**: Vast/Dynamisch contract, met/zonder batterij
+- ✅ **Drill-down navigatie**: maand → dag → uur/kwartier met batterij gedrag
+- ✅ **Besparingen analyse**: Gedetailleerde vergelijking van alle scenario's
+
 ## Technologie
 
 - **Frontend**: Vanilla JavaScript (geen frameworks)
@@ -48,6 +57,7 @@ site/
 ├── index.html                      # Arbitrage simulatie
 ├── with_solar.html                 # Simulatie met PV en verbruik
 ├── advanced.html                   # Geavanceerde analyse (vermogensscan)
+├── custom_data.html                # Simulatie met eigen P1 data
 ├── technical.html                  # Technische details
 ├── about.html                      # Over pagina
 ├── legal.html                      # Disclaimer
@@ -58,15 +68,19 @@ site/
 │   ├── optimizer.js                # MILP optimizer (HiGHS solver)
 │   ├── simulator.js                # Arbitrage simulator
 │   ├── solar_simulator.js          # PV + verbruik simulator
+│   ├── custom_data_simulator.js    # Simulator voor eigen P1 data
+│   ├── p1_parser.js                # P1 CSV parser met interval detectie
 │   ├── ui.js                       # UI arbitrage
 │   ├── solar_ui.js                 # UI met PV
+│   ├── custom_data_ui.js           # UI voor eigen P1 data
 │   ├── charts.js                   # Chart.js visualisaties
 │   ├── efficiency_curves.js        # Victron efficiency curves
 │   ├── power_sweep.js              # Vermogensscan logica
 │   ├── advanced_ui.js              # UI geavanceerde analyse
 │   └── lib/                        # HiGHS solver (WebAssembly)
 ├── data/
-│   ├── prices_2024.json            # EPEX prijzen per jaar
+│   ├── prices_2024.json            # EPEX prijzen per jaar (uurlijks)
+│   ├── prices_2025.json            # EPEX prijzen 2025 (kwartier vanaf okt)
 │   ├── consumption_2024_basis.json # Verbruiksprofielen
 │   ├── consumption_2024_wp.json
 │   ├── consumption_2024_ev.json
@@ -162,13 +176,16 @@ De simulator is gebaseerd op een niet-publieke Python implementatie en volledig 
 - [x] Efficiency curves (Victron MultiPlus 5000, vermogensafhankelijk)
 - [x] 4 scenario's vergelijking (vast/dynamisch, met/zonder batterij)
 - [x] Greedy strategie voor vaste prijzen (zelfverbruik maximalisatie)
+- [x] P1 meter data upload (CSV format)
+- [x] Kwartier prijsdata ondersteuning (15-min granulariteit vanaf oktober 2025)
+- [x] Drill-down navigatie met interactieve grafieken
 
 ### Toekomstige Verbeteringen
 
 - [ ] Meer jaren voor verbruik/PV data (nu alleen 2024)
 - [ ] Meer verbruiksprofielen (airco, zwembad, etc.)
-- [ ] Custom verbruik upload
 - [ ] Optimalisatie algoritme voor vermogensscan (gradient descent)
+- [ ] Batterij degradatie modellering
 
 ## Contact
 
