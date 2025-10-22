@@ -11,6 +11,13 @@ class CustomDataSimulator {
         this.pricesData = pricesData;       // EPEX prices
         this.dataInterval = dataInterval;   // Data interval in minutes (15 or 60, matches prices)
         this.durationHours = dataInterval / 60;  // 0.25 for quarterly, 1.0 for hourly
+
+        // Create price map for O(1) lookups (performance optimization)
+        this.priceMap = new Map();
+        for (const price of pricesData) {
+            const ts = new Date(price.timestamp).getTime();
+            this.priceMap.set(ts, price);
+        }
     }
 
     /**
@@ -448,14 +455,11 @@ class CustomDataSimulator {
     /**
      * Find EPEX price for given timestamp
      * P1 data and price data are already on the same interval, so exact match
+     * Uses Map for O(1) lookup performance
      */
     findPrice(timestamp) {
-        const ts = new Date(timestamp);
-
-        return this.pricesData.find(p => {
-            const priceTime = new Date(p.timestamp);
-            return priceTime.getTime() === ts.getTime();
-        });
+        const ts = new Date(timestamp).getTime();
+        return this.priceMap.get(ts);
     }
 
     /**
