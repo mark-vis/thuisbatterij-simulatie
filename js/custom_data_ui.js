@@ -401,11 +401,12 @@ function buildPriceConfig(priceMode, formData) {
  * Calculate price statistics (average prices and export at negative prices)
  */
 function calculatePriceStatistics(dynNoBat, dynWithBat) {
-    // Calculate weighted average buy price (weighted by import energy)
+    // Calculate weighted average buy price for scenario WITH battery
+    // (weighted by import energy in the with-battery scenario)
     let totalImportEnergy = 0;
     let weightedBuyPrice = 0;
 
-    for (const hour of dynNoBat.hourlyResults) {
+    for (const hour of dynWithBat.hourlyResults) {
         if (hour.gridImport > 0) {
             totalImportEnergy += hour.gridImport;
             weightedBuyPrice += hour.gridImport * hour.buyPrice;
@@ -414,11 +415,12 @@ function calculatePriceStatistics(dynNoBat, dynWithBat) {
 
     const avgBuyPrice = totalImportEnergy > 0 ? weightedBuyPrice / totalImportEnergy : 0;
 
-    // Calculate weighted average sell price (weighted by export energy)
+    // Calculate weighted average sell price for scenario WITH battery
+    // (weighted by export energy in the with-battery scenario)
     let totalExportEnergy = 0;
     let weightedSellPrice = 0;
 
-    for (const hour of dynNoBat.hourlyResults) {
+    for (const hour of dynWithBat.hourlyResults) {
         if (hour.gridExport > 0) {
             totalExportEnergy += hour.gridExport;
             weightedSellPrice += hour.gridExport * hour.sellPrice;
