@@ -214,20 +214,43 @@ async function handleFormSubmit(e) {
         progressBar.style.width = '5%';
 
         const years = parsedData.years;
-        const pricesData = await loadPriceDataForYears(years);
+        let pricesData = await loadPriceDataForYears(years);
 
-        // Detect the finest interval in price data
-        const priceInterval = detectFinestPriceInterval(pricesData);
-        console.log(`Fijnste prijsdata interval: ${priceInterval} minuten`);
+        // Detect intervals
+        const p1Interval = parsedData.detectedInterval;  // P1 data interval (from parser)
+        const priceInterval = detectFinestPriceInterval(pricesData);  // Price data interval
+        console.log(`P1 data interval: ${p1Interval} min, Prijsdata interval: ${priceInterval} min`);
 
-        // Aggregate P1 data to match the finest price interval
-        progressText.textContent = `P1 data aggregeren naar ${priceInterval} min intervallen...`;
-        progressBar.style.width = '8%';
-        const aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, priceInterval);
+        // Determine simulation interval and aggregate accordingly
+        let simulationInterval;
+        let aggregatedData;
+
+        if (p1Interval >= priceInterval) {
+            // P1 data is coarser or equal → aggregate prices to P1 interval
+            simulationInterval = p1Interval;
+
+            if (p1Interval > priceInterval) {
+                progressText.textContent = `Prijsdata aggregeren naar ${p1Interval} min (gemiddelde van kwartieren)...`;
+                progressBar.style.width = '8%';
+                pricesData = aggregatePricesToInterval(pricesData, p1Interval);
+            }
+
+            // Use P1 data as-is (already at correct interval)
+            aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, p1Interval);
+            console.log(`Simulatie op ${p1Interval} min interval (P1 data resolutie)`);
+        } else {
+            // P1 data is finer → aggregate P1 data to price interval (oude gedrag)
+            simulationInterval = priceInterval;
+            progressText.textContent = `P1 data aggregeren naar ${priceInterval} min intervallen...`;
+            progressBar.style.width = '8%';
+            aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, priceInterval);
+            console.log(`Simulatie op ${priceInterval} min interval (prijsdata resolutie)`);
+        }
+
         parsedData.parser.calculateStats();
         const formattedData = parsedData.parser.formatForSimulator(aggregatedData);
 
-        console.log(`P1 data geaggregeerd (${formattedData.length} intervals)`);
+        console.log(`Geaggregeerde data: ${formattedData.length} intervals`);
 
         // Trim P1 data to available price data range
         const trimmedData = trimToAvailablePrices(formattedData, pricesData);
@@ -263,14 +286,14 @@ async function handleFormSubmit(e) {
             sell: fixedSellPrice
         };
 
-        // Create simulator with detected interval
+        // Create simulator with simulation interval
         const simulator = new CustomDataSimulator(
             batteryConfig,
             priceConfig,
             fixedPriceConfig,
             trimmedData.data,
             pricesData,
-            priceInterval  // Use detected interval (15 or 60)
+            simulationInterval  // Use determined simulation interval (15 or 60)
         );
 
         // Run simulation
@@ -386,6 +409,67 @@ function detectFinestPriceInterval(pricesData) {
     }
 
     return 60; // All hourly
+}
+
+/**
+ * Aggregate price data to a coarser interval (e.g., quarterly → hourly)
+ * Used when P1 data has coarser resolution than price data
+ * Returns prices with averaged values per target interval
+ */
+function aggregatePricesToInterval(pricesData, targetIntervalMinutes) {
+    if (!pricesData || pricesData.length === 0) {
+        throw new Error('Geen prijsdata om te aggregeren');
+    }
+
+    if (targetIntervalMinutes !== 15 && targetIntervalMinutes !== 60) {
+        throw new Error('Alleen 15 of 60 minuten intervallen ondersteund');
+    }
+
+    // Group prices by target interval
+    const intervalMap = new Map();
+
+    for (const price of pricesData) {
+        const timestamp = new Date(price.timestamp);
+
+        // Round down to target interval
+        if (targetIntervalMinutes === 60) {
+            // Round to hour
+            timestamp.setMinutes(0, 0, 0);
+        } else {
+            // Round to nearest quarter (0, 15, 30, 45)
+            const minutes = timestamp.getMinutes();
+            const roundedMinutes = Math.floor(minutes / 15) * 15;
+            timestamp.setMinutes(roundedMinutes, 0, 0);
+        }
+
+        const key = timestamp.toISOString();
+
+        if (!intervalMap.has(key)) {
+            intervalMap.set(key, {
+                timestamp: timestamp.toISOString(),
+                prices: []
+            });
+        }
+
+        intervalMap.get(key).prices.push(price.price);
+    }
+
+    // Calculate average price per interval
+    const aggregatedPrices = [];
+    for (const [key, data] of intervalMap) {
+        const avgPrice = data.prices.reduce((sum, p) => sum + p, 0) / data.prices.length;
+        aggregatedPrices.push({
+            timestamp: data.timestamp,
+            price: avgPrice
+        });
+    }
+
+    // Sort by timestamp
+    aggregatedPrices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    console.log(`Prijsdata geaggregeerd van ${pricesData.length} naar ${aggregatedPrices.length} intervallen (${targetIntervalMinutes} min)`);
+
+    return aggregatedPrices;
 }
 
 /**
