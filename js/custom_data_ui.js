@@ -62,6 +62,14 @@ async function handleFileUpload(e) {
         const interval = parser.detectInterval(rawData);
         const deltaData = parser.calculateDeltas(rawData);
 
+        // Detect year range (for multi-year datasets)
+        const firstYear = rawData[0].timestamp.getFullYear();
+        const lastYear = rawData[rawData.length - 1].timestamp.getFullYear();
+        const years = [];
+        for (let y = firstYear; y <= lastYear; y++) {
+            years.push(y);
+        }
+
         // Store raw data for later aggregation
         parsedData = {
             parser: parser,
@@ -69,7 +77,8 @@ async function handleFileUpload(e) {
             rawData: rawData,
             detectedInterval: interval,
             detectedFormat: parser.detectedFormat,  // 'p1' or 'simple'
-            year: rawData[0].timestamp.getFullYear(),
+            year: firstYear,  // Keep for backwards compatibility
+            years: years,  // All years spanned by the data
             firstTimestamp: rawData[0].timestamp,
             lastTimestamp: rawData[rawData.length - 1].timestamp
         };
@@ -104,6 +113,11 @@ function displayDataPreview(data) {
     const stats = data.stats;
     const formatType = data.detectedFormat === 'simple' ? 'Simpel (Import/Export/Opwek)' : 'P1 (cumulatieve meterstanden)';
 
+    // Display year(s)
+    const firstYear = parsedData.firstTimestamp.getFullYear();
+    const lastYear = parsedData.lastTimestamp.getFullYear();
+    const yearDisplay = firstYear === lastYear ? firstYear : `${firstYear}-${lastYear}`;
+
     // Show statistics
     const statsHtml = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
@@ -111,7 +125,7 @@ function displayDataPreview(data) {
                 <strong>Format:</strong> ${formatType}
             </div>
             <div class="stat-item">
-                <strong>Jaar:</strong> ${stats.year}
+                <strong>Jaar:</strong> ${yearDisplay}
             </div>
             <div class="stat-item">
                 <strong>Periode:</strong> ${stats.firstTimestamp.toLocaleDateString('nl-NL')} - ${stats.lastTimestamp.toLocaleDateString('nl-NL')}
@@ -195,12 +209,12 @@ async function handleFormSubmit(e) {
     progressContainer.style.display = 'block';
 
     try {
-        // Load EPEX prices for the year
+        // Load EPEX prices for all years in the dataset
         progressText.textContent = 'Prijsdata laden...';
         progressBar.style.width = '5%';
 
-        const year = parsedData.year;
-        const pricesData = await loadPriceData(year);
+        const years = parsedData.years;
+        const pricesData = await loadPriceDataForYears(years);
 
         // Detect the finest interval in price data
         const priceInterval = detectFinestPriceInterval(pricesData);
@@ -308,6 +322,46 @@ async function loadPriceData(year) {
     }
     const data = await response.json();
     return data.prices;
+}
+
+/**
+ * Load price data for multiple years and merge them
+ * Handles missing years gracefully by only loading available data
+ */
+async function loadPriceDataForYears(years) {
+    const allPrices = [];
+    const loadedYears = [];
+    const missingYears = [];
+
+    for (const year of years) {
+        try {
+            const prices = await loadPriceData(year);
+            allPrices.push(...prices);
+            loadedYears.push(year);
+            console.log(`Prijsdata geladen voor ${year}: ${prices.length} records`);
+        } catch (error) {
+            missingYears.push(year);
+            console.warn(`Prijsdata voor ${year} niet beschikbaar`);
+        }
+    }
+
+    if (allPrices.length === 0) {
+        throw new Error(`Geen prijsdata beschikbaar voor jaren: ${years.join(', ')}`);
+    }
+
+    // Warn user if some years are missing
+    if (missingYears.length > 0) {
+        const warning = `Let op: Prijsdata voor ${missingYears.join(', ')} is nog niet beschikbaar. Simulatie wordt beperkt tot beschikbare data.`;
+        console.warn(warning);
+        alert(warning);
+    }
+
+    // Sort by timestamp to ensure chronological order
+    allPrices.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    console.log(`Totaal ${allPrices.length} prijsrecords geladen voor jaren: ${loadedYears.join(', ')}`);
+
+    return allPrices;
 }
 
 /**
