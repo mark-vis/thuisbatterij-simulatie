@@ -8,10 +8,42 @@ class P1Parser {
         this.detectedInterval = null;
         this.hourlyData = null;
         this.stats = null;
+        this.detectedFormat = null;  // 'p1' or 'simple'
     }
 
     /**
-     * Parse CSV string
+     * Detect CSV format and separator
+     * Returns: { format: 'p1' | 'simple', separator: ',' | ';' }
+     */
+    detectFormat(csvString) {
+        const lines = csvString.trim().split('\n');
+        if (lines.length < 1) {
+            throw new Error('CSV bestand is leeg');
+        }
+
+        const firstLine = lines[0].toLowerCase();
+
+        // Check for semicolon separator (simple format)
+        if (firstLine.includes(';')) {
+            // Simple format: "DatumTijd;Import;Export;Opwek"
+            if (firstLine.includes('datumtijd') && firstLine.includes('import') && firstLine.includes('export')) {
+                return { format: 'simple', separator: ';' };
+            }
+        }
+
+        // Check for comma separator (P1 format)
+        if (firstLine.includes(',')) {
+            // P1 format: "time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh"
+            if (firstLine.includes('time') && (firstLine.includes('import t1') || firstLine.includes('import'))) {
+                return { format: 'p1', separator: ',' };
+            }
+        }
+
+        throw new Error('Onbekend CSV format. Verwacht P1 format (time, Import T1, ...) of simpel format (DatumTijd;Import;Export;Opwek)');
+    }
+
+    /**
+     * Parse CSV string - auto-detects format
      */
     parseCSV(csvString) {
         const lines = csvString.trim().split('\n');
@@ -20,16 +52,33 @@ class P1Parser {
             throw new Error('CSV bestand is te kort (minimaal header + 1 data rij nodig)');
         }
 
+        // Detect format
+        const { format, separator } = this.detectFormat(csvString);
+        this.detectedFormat = format;
+
+        console.log(`Gedetecteerd CSV format: ${format} (separator: '${separator}')`);
+
+        if (format === 'simple') {
+            return this.parseSimpleFormat(lines, separator);
+        } else {
+            return this.parseP1Format(lines, separator);
+        }
+    }
+
+    /**
+     * Parse P1 format (cumulative meter readings)
+     */
+    parseP1Format(lines, separator) {
         // Parse header
-        const header = lines[0].split(',').map(h => h.trim());
+        const header = lines[0].split(separator).map(h => h.trim());
 
         // Validate header
-        this.validateHeader(header);
+        this.validateP1Header(header);
 
         // Parse data rows
         const data = [];
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',');
+            const values = lines[i].split(separator);
 
             if (values.length !== header.length) {
                 console.warn(`Regel ${i + 1} heeft verkeerd aantal kolommen, wordt geskipt`);
@@ -37,7 +86,7 @@ class P1Parser {
             }
 
             try {
-                const row = this.parseRow(values);
+                const row = this.parseP1Row(values);
                 data.push(row);
             } catch (err) {
                 console.warn(`Fout bij parsen regel ${i + 1}: ${err.message}`);
@@ -53,9 +102,45 @@ class P1Parser {
     }
 
     /**
-     * Validate CSV header
+     * Parse simple format (direct kWh per hour with PV generation)
      */
-    validateHeader(header) {
+    parseSimpleFormat(lines, separator) {
+        // Parse header
+        const header = lines[0].split(separator).map(h => h.trim());
+
+        // Validate header
+        this.validateSimpleHeader(header);
+
+        // Parse data rows
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(separator);
+
+            if (values.length < 3) {
+                console.warn(`Regel ${i + 1} heeft te weinig kolommen, wordt geskipt`);
+                continue;
+            }
+
+            try {
+                const row = this.parseSimpleRow(values);
+                data.push(row);
+            } catch (err) {
+                console.warn(`Fout bij parsen regel ${i + 1}: ${err.message}`);
+            }
+        }
+
+        if (data.length === 0) {
+            throw new Error('Geen geldige data gevonden in CSV');
+        }
+
+        this.rawData = data;
+        return data;
+    }
+
+    /**
+     * Validate P1 CSV header
+     */
+    validateP1Header(header) {
         const required = ['time', 'import t1', 'import t2', 'export t1', 'export t2'];
         const headerLower = header.map(h => h.toLowerCase());
 
@@ -67,9 +152,23 @@ class P1Parser {
     }
 
     /**
-     * Parse a single data row
+     * Validate simple CSV header
      */
-    parseRow(values) {
+    validateSimpleHeader(header) {
+        const required = ['datumtijd', 'import', 'export'];
+        const headerLower = header.map(h => h.toLowerCase());
+
+        for (const req of required) {
+            if (!headerLower.some(h => h.includes(req))) {
+                throw new Error(`Vereiste kolom niet gevonden: "${req}"`);
+            }
+        }
+    }
+
+    /**
+     * Parse a single P1 data row (cumulative meter readings)
+     */
+    parseP1Row(values) {
         // Parse timestamp
         const timestamp = new Date(values[0].trim());
         if (isNaN(timestamp.getTime())) {
@@ -95,6 +194,76 @@ class P1Parser {
             totalImport: importT1 + importT2,
             totalExport: exportT1 + exportT2
         };
+    }
+
+    /**
+     * Parse a single simple format row (direct kWh per hour)
+     * Format: DatumTijd;Import;Export;Opwek
+     * Uses Dutch decimal separator (,) and date format (dd-MM-yyyy HH:mm:ss)
+     */
+    parseSimpleRow(values) {
+        // Parse timestamp - Dutch format: "06-10-2024 00:00:00"
+        const timestampStr = values[0].trim();
+        const timestamp = this.parseDutchDate(timestampStr);
+
+        if (isNaN(timestamp.getTime())) {
+            throw new Error(`Ongeldige timestamp: ${timestampStr}`);
+        }
+
+        // Parse energy values - Dutch decimal separator (,)
+        const importKwh = this.parseDutchDecimal(values[1]);
+        const exportKwh = this.parseDutchDecimal(values[2]);
+        const pvGenKwh = values.length > 3 ? this.parseDutchDecimal(values[3]) : 0;
+
+        if ([importKwh, exportKwh, pvGenKwh].some(v => isNaN(v))) {
+            throw new Error('Ongeldige energie waarden');
+        }
+
+        // For simple format, these are already delta values (kWh per hour)
+        // Store as "cumulative" by summing (for compatibility with delta calculation)
+        return {
+            timestamp,
+            importDelta: importKwh,
+            exportDelta: exportKwh,
+            pvGeneration: pvGenKwh,
+            isSimpleFormat: true  // Flag to skip delta calculation
+        };
+    }
+
+    /**
+     * Parse Dutch date format: dd-MM-yyyy HH:mm:ss
+     */
+    parseDutchDate(dateStr) {
+        // Format: "06-10-2024 00:00:00"
+        const parts = dateStr.split(' ');
+        if (parts.length !== 2) {
+            throw new Error(`Ongeldige datum format: ${dateStr}`);
+        }
+
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+
+        if (dateParts.length !== 3 || timeParts.length !== 3) {
+            throw new Error(`Ongeldige datum format: ${dateStr}`);
+        }
+
+        const day = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]) - 1;  // JS months are 0-indexed
+        const year = parseInt(dateParts[2]);
+        const hour = parseInt(timeParts[0]);
+        const minute = parseInt(timeParts[1]);
+        const second = parseInt(timeParts[2]);
+
+        return new Date(year, month, day, hour, minute, second);
+    }
+
+    /**
+     * Parse Dutch decimal format (comma separator)
+     */
+    parseDutchDecimal(value) {
+        if (typeof value === 'number') return value;
+        const normalized = value.trim().replace(',', '.');
+        return parseFloat(normalized);
     }
 
     /**
@@ -137,10 +306,34 @@ class P1Parser {
 
     /**
      * Calculate deltas from cumulative meter readings
+     * For simple format, data is already in delta form
      */
     calculateDeltas(data) {
         const result = [];
 
+        // Check if this is simple format (already has deltas)
+        if (data.length > 0 && data[0].isSimpleFormat) {
+            // Data is already in delta form, just reformat
+            for (const row of data) {
+                const timeDiffHours = 1.0;  // Simple format is hourly
+
+                // Netto grid flow: positive = import, negative = export
+                const netGridFlow = row.importDelta - row.exportDelta;
+
+                result.push({
+                    timestamp: row.timestamp,
+                    timeDiffHours,
+                    importDelta: row.importDelta,
+                    exportDelta: row.exportDelta,
+                    pvGeneration: row.pvGeneration || 0,
+                    netGridFlow
+                });
+            }
+
+            return result;
+        }
+
+        // P1 format: calculate deltas from cumulative readings
         for (let i = 1; i < data.length; i++) {
             const prev = data[i - 1];
             const curr = data[i];

@@ -68,6 +68,7 @@ async function handleFileUpload(e) {
             deltaData: deltaData,
             rawData: rawData,
             detectedInterval: interval,
+            detectedFormat: parser.detectedFormat,  // 'p1' or 'simple'
             year: rawData[0].timestamp.getFullYear(),
             firstTimestamp: rawData[0].timestamp,
             lastTimestamp: rawData[rawData.length - 1].timestamp
@@ -79,7 +80,8 @@ async function handleFileUpload(e) {
         displayDataPreview({
             hourlyData: previewAggregated,
             stats: parser.stats,
-            formatted: parser.formatForSimulator(previewAggregated)
+            formatted: parser.formatForSimulator(previewAggregated),
+            detectedFormat: parser.detectedFormat
         });
         preview.style.display = 'block';
 
@@ -100,10 +102,14 @@ async function handleFileUpload(e) {
  */
 function displayDataPreview(data) {
     const stats = data.stats;
+    const formatType = data.detectedFormat === 'simple' ? 'Simpel (Import/Export/Opwek)' : 'P1 (cumulatieve meterstanden)';
 
     // Show statistics
     const statsHtml = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <div class="stat-item">
+                <strong>Format:</strong> ${formatType}
+            </div>
             <div class="stat-item">
                 <strong>Jaar:</strong> ${stats.year}
             </div>

@@ -36,11 +36,12 @@
                 <div class="form-section">
                     <h3>P1 Data Upload</h3>
                     <div class="form-group">
-                        <label for="p1File">Selecteer P1 CSV bestand:</label>
+                        <label for="p1File">Selecteer CSV bestand:</label>
                         <input type="file" id="p1File" name="p1File" accept=".csv" required>
                         <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
-                            Verwacht formaat: time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh<br>
-                            Tijdsintervallen worden automatisch gedetecteerd (5 min, 15 min, 60 min, etc.)
+                            <strong>P1 format:</strong> time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh<br>
+                            <strong>Simpel format:</strong> DatumTijd;Import;Export;Opwek (Nederlandse decimalen)<br>
+                            Tijdsintervallen en format worden automatisch gedetecteerd
                         </small>
                     </div>
 
