@@ -4,10 +4,14 @@
 
 // Global state
 let currentResults = null;
+let currentSimulator = null;  // For drill-down navigation
+let currentMonthlySummaries = null;  // For drill-down navigation
 let costsComparisonChart = null;
 let selfConsumptionChart = null;
 let selfSufficiencyChart = null;
 let energyFlowsChart = null;
+let gridFlowsChart = null;
+let timestepChart = null;  // For drill-down timestep chart
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,6 +40,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shareButton = document.getElementById('shareUrlButton');
     if (shareButton) {
         shareButton.addEventListener('click', copyShareUrl);
+    }
+
+    // Negative price warning
+    const fixedSellPriceInput = document.getElementById('fixedSellPrice');
+    const negativePriceWarning = document.getElementById('negativePriceWarning');
+    if (fixedSellPriceInput && negativePriceWarning) {
+        fixedSellPriceInput.addEventListener('input', () => {
+            const value = parseFloat(fixedSellPriceInput.value);
+            if (value < 0) {
+                negativePriceWarning.style.display = 'block';
+            } else {
+                negativePriceWarning.style.display = 'none';
+            }
+        });
+    }
+
+    // Close detail view button
+    const closeDetailBtn = document.getElementById('closeDetail');
+    if (closeDetailBtn) {
+        closeDetailBtn.addEventListener('click', closeDetailView);
     }
 
     // Load parameters from URL and auto-run if present
@@ -216,6 +240,95 @@ function buildPriceConfig(priceMode, formData) {
     }
 
     throw new Error('Onbekende price mode: ' + priceMode);
+}
+
+/**
+ * Calculate price statistics (average prices and export at negative prices)
+ * Compares scenarios without battery vs with battery
+ */
+function calculatePriceStatistics(noBat, withBat) {
+    // Calculate weighted average buy price WITHOUT battery
+    let totalImportEnergyNoBat = 0;
+    let weightedBuyPriceNoBat = 0;
+
+    for (const hour of noBat.history) {
+        if (hour.gridImport > 0) {
+            totalImportEnergyNoBat += hour.gridImport;
+            weightedBuyPriceNoBat += hour.gridImport * hour.buyPrice;
+        }
+    }
+
+    const avgBuyPriceNoBat = totalImportEnergyNoBat > 0 ? weightedBuyPriceNoBat / totalImportEnergyNoBat : 0;
+
+    // Calculate weighted average buy price WITH battery
+    let totalImportEnergyWithBat = 0;
+    let weightedBuyPriceWithBat = 0;
+
+    for (const hour of withBat.history) {
+        if (hour.gridImport > 0) {
+            totalImportEnergyWithBat += hour.gridImport;
+            weightedBuyPriceWithBat += hour.gridImport * hour.buyPrice;
+        }
+    }
+
+    const avgBuyPriceWithBat = totalImportEnergyWithBat > 0 ? weightedBuyPriceWithBat / totalImportEnergyWithBat : 0;
+
+    // Calculate weighted average sell price WITHOUT battery
+    let totalExportEnergyNoBat = 0;
+    let weightedSellPriceNoBat = 0;
+
+    for (const hour of noBat.history) {
+        if (hour.gridExport > 0) {
+            totalExportEnergyNoBat += hour.gridExport;
+            weightedSellPriceNoBat += hour.gridExport * hour.sellPrice;
+        }
+    }
+
+    const avgSellPriceNoBat = totalExportEnergyNoBat > 0 ? weightedSellPriceNoBat / totalExportEnergyNoBat : 0;
+
+    // Calculate weighted average sell price WITH battery
+    let totalExportEnergyWithBat = 0;
+    let weightedSellPriceWithBat = 0;
+
+    for (const hour of withBat.history) {
+        if (hour.gridExport > 0) {
+            totalExportEnergyWithBat += hour.gridExport;
+            weightedSellPriceWithBat += hour.gridExport * hour.sellPrice;
+        }
+    }
+
+    const avgSellPriceWithBat = totalExportEnergyWithBat > 0 ? weightedSellPriceWithBat / totalExportEnergyWithBat : 0;
+
+    // Calculate export at negative sell prices (without battery)
+    let exportAtNegPriceNoBat = 0;
+    let exportCostAtNegPriceNoBat = 0;  // Cost = negative revenue
+    for (const hour of noBat.history) {
+        if (hour.sellPrice < 0 && hour.gridExport > 0) {
+            exportAtNegPriceNoBat += hour.gridExport;
+            exportCostAtNegPriceNoBat += hour.gridExport * hour.sellPrice;  // Negative price × positive export = negative value (cost)
+        }
+    }
+
+    // Calculate export at negative sell prices (with battery)
+    let exportAtNegPriceWithBat = 0;
+    let exportCostAtNegPriceWithBat = 0;
+    for (const hour of withBat.history) {
+        if (hour.sellPrice < 0 && hour.gridExport > 0) {
+            exportAtNegPriceWithBat += hour.gridExport;
+            exportCostAtNegPriceWithBat += hour.gridExport * hour.sellPrice;
+        }
+    }
+
+    return {
+        avgBuyPriceNoBat,
+        avgBuyPriceWithBat,
+        avgSellPriceNoBat,
+        avgSellPriceWithBat,
+        exportAtNegPriceNoBat,
+        exportAtNegPriceWithBat,
+        exportCostAtNegPriceNoBat,
+        exportCostAtNegPriceWithBat
+    };
 }
 
 /**
