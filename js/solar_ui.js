@@ -161,8 +161,8 @@ async function handleFormSubmit(e) {
         // Hide progress
         progressContainer.style.display = 'none';
 
-        // Display results
-        displayResults(results, year);
+        // Display results (pass simulator for drill-down functionality)
+        displayResults(results, year, simulator);
 
     } catch (error) {
         console.error('Simulation error:', error);
@@ -334,12 +334,13 @@ function calculatePriceStatistics(noBat, withBat) {
 /**
  * Display simulation results
  */
-function displayResults(results, year) {
+function displayResults(results, year, simulator) {
     const resultsSection = document.getElementById('results');
     resultsSection.style.display = 'block';
 
-    // Store results for drill-down navigation
+    // Store results and simulator for drill-down navigation
     currentResults = results;
+    currentSimulator = simulator;
 
     const noBattery = results.noBattery;
     const withBattery = results.withBattery;
@@ -353,6 +354,19 @@ function displayResults(results, year) {
     // Besparing Totaal = vast zonder batterij → dynamisch met batterij
     const totalSavings = fixedContract.totalCost - withBattery.totalCost;
     document.getElementById('totalSavings').textContent = '€' + totalSavings.toFixed(2);
+
+    // Debug: Check if data exists
+    console.log('withBattery:', {
+        cycles: withBattery.cycles,
+        totalGridImport: withBattery.totalGridImport,
+        totalGridExport: withBattery.totalGridExport,
+        historyLength: withBattery.history ? withBattery.history.length : 0
+    });
+    console.log('noBattery:', {
+        totalGridImport: noBattery.totalGridImport,
+        totalGridExport: noBattery.totalGridExport,
+        historyLength: noBattery.history ? noBattery.history.length : 0
+    });
 
     // Populate battery cycle statistics
     document.getElementById('totalCycles').textContent = withBattery.cycles.toFixed(1);
@@ -384,14 +398,12 @@ function displayResults(results, year) {
         `zonder bat: ${priceStats.exportAtNegPriceNoBat.toFixed(0)} kWh / €${costNoBat.toFixed(2)}`;
 
     // Generate monthly summaries
-    const simulator = new SolarSimulator(null, null, null, null, [], [], []);
     const noBatteryMonthly = simulator.getMonthlySummary(noBattery);
     const withBatteryMonthly = simulator.getMonthlySummary(withBattery);
     const fixedContractMonthly = simulator.getMonthlySummary(fixedContract);
     const fixedWithBatteryMonthly = simulator.getMonthlySummary(fixedWithBattery);
 
     // Store for drill-down navigation
-    currentSimulator = simulator;
     currentMonthlySummaries = {
         noBattery: noBatteryMonthly,
         withBattery: withBatteryMonthly,
@@ -974,7 +986,8 @@ function fillMonthlyTable(withBatteryMonthly) {
         `;
 
         // Make row clickable to drill down to daily view
-        const monthKey = `${withBat.year}-${String(withBat.month).padStart(2, '0')}`;
+        // monthName is already in YYYY-MM format
+        const monthKey = withBat.monthName;
         row.addEventListener('click', () => showMonthDetail(monthKey));
 
         tbody.appendChild(row);
