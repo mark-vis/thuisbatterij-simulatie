@@ -193,16 +193,19 @@ class PowerOptimizer {
      */
     async evaluateConfiguration(chargePower, dischargePower, options) {
         // Get efficiency for this power level
-        const chargeEff = this.efficiencyCurve.getCombinedEfficiency(chargePower, this.capacityKwh);
-        const dischargeEff = this.efficiencyCurve.getCombinedEfficiency(dischargePower, this.capacityKwh);
+        const eff = this.efficiencyCurve.getCombinedEfficiency(
+            chargePower,
+            dischargePower,
+            this.capacityKwh
+        );
 
         // Create battery configuration (same as power_sweep.js)
         const batteryConfig = {
             capacityKwh: this.capacityKwh,
             chargePowerKw: chargePower,
             dischargePowerKw: dischargePower,
-            chargeEfficiency: chargeEff.chargeTotal,
-            dischargeEfficiency: dischargeEff.dischargeTotal,
+            chargeEfficiency: eff.chargeTotal,
+            dischargeEfficiency: eff.dischargeTotal,
             minSocPct: options.minSocPct / 100,
             maxSocPct: options.maxSocPct / 100
         };
@@ -225,14 +228,14 @@ class PowerOptimizer {
             profit: totals.totalProfit,
             cycles: totals.totalCycles,
             profitPerCycle: totals.avgProfitPerCycle,
-            chargeEfficiency: chargeEff.chargeTotal,
-            dischargeEfficiency: dischargeEff.dischargeTotal,
-            chargeInverterEff: chargeEff.chargeInverter,
-            dischargeInverterEff: dischargeEff.dischargeInverter,
-            chargeBatteryRTE: chargeEff.batteryRTE,
-            dischargeBatteryRTE: dischargeEff.batteryRTE,
-            chargeCRate: chargeEff.cRate,
-            dischargeCRate: dischargeEff.cRate,
+            chargeEfficiency: eff.chargeTotal,
+            dischargeEfficiency: eff.dischargeTotal,
+            chargeInverterEff: eff.chargeInverter,
+            dischargeInverterEff: eff.dischargeInverter,
+            chargeBatteryRTE: eff.batteryRTE,
+            dischargeBatteryRTE: eff.batteryRTE,  // Same RTE for both
+            chargeCRate: eff.cRateCharge,
+            dischargeCRate: eff.cRateDischarge,
             monthlySummary: monthly,
             history: history
         };

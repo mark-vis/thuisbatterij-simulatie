@@ -57,11 +57,8 @@ class PowerSweepAnalysis {
                 current++;
 
                 // Calculate efficiencies for this power configuration
-                const chargeEff = this.efficiencyCurve.getCombinedEfficiency(
+                const eff = this.efficiencyCurve.getCombinedEfficiency(
                     chargePower,
-                    this.capacityKwh
-                );
-                const dischargeEff = this.efficiencyCurve.getCombinedEfficiency(
                     dischargePower,
                     this.capacityKwh
                 );
@@ -71,8 +68,8 @@ class PowerSweepAnalysis {
                     capacityKwh: this.capacityKwh,
                     chargePowerKw: chargePower,
                     dischargePowerKw: dischargePower,
-                    chargeEfficiency: chargeEff.chargeTotal,
-                    dischargeEfficiency: dischargeEff.dischargeTotal,
+                    chargeEfficiency: eff.chargeTotal,
+                    dischargeEfficiency: eff.dischargeTotal,
                     minSocPct: minSocPct / 100,
                     maxSocPct: maxSocPct / 100
                 };
@@ -93,14 +90,14 @@ class PowerSweepAnalysis {
                 results.push({
                     chargePower,
                     dischargePower,
-                    chargeEfficiency: chargeEff.chargeTotal,
-                    dischargeEfficiency: dischargeEff.dischargeTotal,
-                    chargeInverterEff: chargeEff.chargeInverter,
-                    dischargeInverterEff: dischargeEff.dischargeInverter,
-                    chargeBatteryRTE: chargeEff.batteryRTE,
-                    dischargeBatteryRTE: dischargeEff.batteryRTE,
-                    chargeCRate: chargeEff.cRate,
-                    dischargeCRate: dischargeEff.cRate,
+                    chargeEfficiency: eff.chargeTotal,
+                    dischargeEfficiency: eff.dischargeTotal,
+                    chargeInverterEff: eff.chargeInverter,
+                    dischargeInverterEff: eff.dischargeInverter,
+                    chargeBatteryRTE: eff.batteryRTE,
+                    dischargeBatteryRTE: eff.batteryRTE,  // Same RTE for both
+                    chargeCRate: eff.cRateCharge,
+                    dischargeCRate: eff.cRateDischarge,
                     profit: totals.totalProfit,
                     cycles: totals.totalCycles,
                     profitPerCycle: totals.avgProfitPerCycle,

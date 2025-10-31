@@ -659,25 +659,39 @@ function updateEfficiencyPreview() {
     const inverterPreset = document.getElementById('inverterPreset').value || 'VICTRON_MP5000_3P';
     const effCurve = EfficiencyCurve[inverterPreset];
 
-    const chargeEff = effCurve.getCombinedEfficiency(chargePower, capacity);
-    const dischargeEff = effCurve.getCombinedEfficiency(dischargePower, capacity);
+    // Calculate C-rates for this example
+    const cRateCharge = chargePower / capacity;
+    const cRateDischarge = dischargePower / capacity;
+
+    // Calculate battery RTE with both C-rates: η = 100 + k·(C_ch + C_dis)
+    const k = -10.7834;
+    const batteryRTE = Math.max(0.5, Math.min(0.999, (100 + k * (cRateCharge + cRateDischarge)) / 100));
+    const batterySingle = Math.sqrt(batteryRTE);
+
+    // Calculate inverter efficiencies
+    const chargeInvEff = effCurve.chargeEffInv(chargePower * 1000);  // Convert to Watt
+    const dischargeInvEff = effCurve.dischargeEffInv(dischargePower * 1000);
+
+    // Combined efficiencies
+    const chargeTotalEff = chargeInvEff * batterySingle;
+    const dischargeTotalEff = dischargeInvEff * batterySingle;
 
     const preview = document.getElementById('efficiencyPreview');
     preview.innerHTML = `
         <p><strong>${effCurve.name}</strong></p>
-        <strong>@ ${chargePower.toFixed(1)} kW laden (C=${chargeEff.cRate.toFixed(2)}):</strong><br>
-        &nbsp;&nbsp;Omvormer: ${(chargeEff.chargeInverter * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;Batterij: ${(chargeEff.batterySingle * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;<strong>Totaal: ${(chargeEff.chargeTotal * 100).toFixed(1)}%</strong><br>
+        <strong>@ ${chargePower.toFixed(1)} kW laden (C=${cRateCharge.toFixed(2)}):</strong><br>
+        &nbsp;&nbsp;Omvormer: ${(chargeInvEff * 100).toFixed(1)}%<br>
+        &nbsp;&nbsp;Batterij: ${(batterySingle * 100).toFixed(1)}%<br>
+        &nbsp;&nbsp;<strong>Totaal: ${(chargeTotalEff * 100).toFixed(1)}%</strong><br>
         <br>
-        <strong>@ ${dischargePower.toFixed(1)} kW ontladen (C=${dischargeEff.cRate.toFixed(2)}):</strong><br>
-        &nbsp;&nbsp;Omvormer: ${(dischargeEff.dischargeInverter * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;Batterij: ${(dischargeEff.batterySingle * 100).toFixed(1)}%<br>
-        &nbsp;&nbsp;<strong>Totaal: ${(dischargeEff.dischargeTotal * 100).toFixed(1)}%</strong>
+        <strong>@ ${dischargePower.toFixed(1)} kW ontladen (C=${cRateDischarge.toFixed(2)}):</strong><br>
+        &nbsp;&nbsp;Omvormer: ${(dischargeInvEff * 100).toFixed(1)}%<br>
+        &nbsp;&nbsp;Batterij: ${(batterySingle * 100).toFixed(1)}%<br>
+        &nbsp;&nbsp;<strong>Totaal: ${(dischargeTotalEff * 100).toFixed(1)}%</strong>
     `;
 
     // Warning for high C-rate
-    if (chargeEff.cRate > 2.0 || dischargeEff.cRate > 2.0) {
+    if (cRateCharge > 2.0 || cRateDischarge > 2.0) {
         preview.innerHTML += '<br><br><span style="color: var(--danger-color);">⚠️ Let op: hoge C-rate, belastend voor batterij!</span>';
     }
 }

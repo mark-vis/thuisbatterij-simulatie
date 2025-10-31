@@ -299,7 +299,8 @@ function createEfficiencyCurveChart(effCurve, capacityKwh) {
     const totalDischargeEffs = [];
 
     for (const power of powers) {
-        const eff = effCurve.getCombinedEfficiency(power, capacityKwh);
+        // Assume charge power = discharge power for the curve
+        const eff = effCurve.getCombinedEfficiency(power, power, capacityKwh);
 
         chargeInverterEffs.push((eff.chargeInverter * 100).toFixed(2));
         dischargeInverterEffs.push((eff.dischargeInverter * 100).toFixed(2));

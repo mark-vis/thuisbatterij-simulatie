@@ -50,37 +50,25 @@ class EfficiencyCurve {
         },
 
         /**
-         * Battery round-trip efficiency
-         * Formula: η = 100 + k·(C_ch + C_dis) met k = -10.7834
-         * @param {number} capacityKwh - Battery capacity in kWh
-         * @returns {number} Round-trip efficiency (0-1)
-         */
-        batteryRTE: function(capacityKwh) {
-            const cRateCharge = this.maxChargePowerKw / capacityKwh;
-            const cRateDischarge = this.maxDischargePowerKw / capacityKwh;
-            const k = -10.7834;
-            const rte = (100 + k * (cRateCharge + cRateDischarge)) / 100;
-            return Math.max(0.5, Math.min(0.999, rte)); // Between 50% and 99.9%
-        },
-
-        /**
          * Calculate combined efficiency for charge and discharge
-         * @param {number} powerKw - Power in kW
+         * @param {number} chargePowerKw - Charge power in kW
+         * @param {number} dischargePowerKw - Discharge power in kW
          * @param {number} capacityKwh - Battery capacity in kWh
          * @returns {Object} Efficiency breakdown
          */
-        getCombinedEfficiency: function(powerKw, capacityKwh) {
-            // Calculate C-rate for display purposes
-            const cRate = powerKw / capacityKwh;
+        getCombinedEfficiency: function(chargePowerKw, dischargePowerKw, capacityKwh) {
+            // Calculate C-rates
+            const cRateCharge = chargePowerKw / capacityKwh;
+            const cRateDischarge = dischargePowerKw / capacityKwh;
 
-            // Battery efficiency (based on max charge/discharge C-rates)
-            const battRTE = this.batteryRTE(capacityKwh);
+            // Battery RTE using both C-rates: η = 100 + k·(C_ch + C_dis)
+            const k = -10.7834;
+            const battRTE = Math.max(0.5, Math.min(0.999, (100 + k * (cRateCharge + cRateDischarge)) / 100));
             const battSingle = Math.sqrt(battRTE);
 
             // Inverter efficiency (input must be in Watt!)
-            const powerWatt = powerKw * 1000;
-            const chInv = this.chargeEffInv(powerWatt);
-            const disInv = this.dischargeEffInv(powerWatt);
+            const chInv = this.chargeEffInv(chargePowerKw * 1000);
+            const disInv = this.dischargeEffInv(dischargePowerKw * 1000);
 
             return {
                 chargeTotal: chInv * battSingle,
@@ -89,7 +77,8 @@ class EfficiencyCurve {
                 dischargeInverter: disInv,
                 batteryRTE: battRTE,
                 batterySingle: battSingle,
-                cRate: cRate
+                cRateCharge: cRateCharge,
+                cRateDischarge: cRateDischarge
             };
         }
     };
@@ -141,37 +130,25 @@ class EfficiencyCurve {
         },
 
         /**
-         * Battery round-trip efficiency
-         * Formula: η = 100 + k·(C_ch + C_dis) met k = -10.7834
-         * @param {number} capacityKwh - Battery capacity in kWh
-         * @returns {number} Round-trip efficiency (0-1)
-         */
-        batteryRTE: function(capacityKwh) {
-            const cRateCharge = this.maxChargePowerKw / capacityKwh;
-            const cRateDischarge = this.maxDischargePowerKw / capacityKwh;
-            const k = -10.7834;
-            const rte = (100 + k * (cRateCharge + cRateDischarge)) / 100;
-            return Math.max(0.5, Math.min(0.999, rte)); // Between 50% and 99.9%
-        },
-
-        /**
          * Calculate combined efficiency for charge and discharge
-         * @param {number} powerKw - Power in kW
+         * @param {number} chargePowerKw - Charge power in kW
+         * @param {number} dischargePowerKw - Discharge power in kW
          * @param {number} capacityKwh - Battery capacity in kWh
          * @returns {Object} Efficiency breakdown
          */
-        getCombinedEfficiency: function(powerKw, capacityKwh) {
-            // Calculate C-rate for display purposes
-            const cRate = powerKw / capacityKwh;
+        getCombinedEfficiency: function(chargePowerKw, dischargePowerKw, capacityKwh) {
+            // Calculate C-rates
+            const cRateCharge = chargePowerKw / capacityKwh;
+            const cRateDischarge = dischargePowerKw / capacityKwh;
 
-            // Battery efficiency (based on max charge/discharge C-rates)
-            const battRTE = this.batteryRTE(capacityKwh);
+            // Battery RTE using both C-rates: η = 100 + k·(C_ch + C_dis)
+            const k = -10.7834;
+            const battRTE = Math.max(0.5, Math.min(0.999, (100 + k * (cRateCharge + cRateDischarge)) / 100));
             const battSingle = Math.sqrt(battRTE);
 
             // Inverter efficiency (input must be in Watt!)
-            const powerWatt = powerKw * 1000;
-            const chInv = this.chargeEffInv(powerWatt);
-            const disInv = this.dischargeEffInv(powerWatt);
+            const chInv = this.chargeEffInv(chargePowerKw * 1000);
+            const disInv = this.dischargeEffInv(dischargePowerKw * 1000);
 
             return {
                 chargeTotal: chInv * battSingle,
@@ -180,7 +157,8 @@ class EfficiencyCurve {
                 dischargeInverter: disInv,
                 batteryRTE: battRTE,
                 batterySingle: battSingle,
-                cRate: cRate
+                cRateCharge: cRateCharge,
+                cRateDischarge: cRateDischarge
             };
         }
     };
