@@ -9,7 +9,8 @@ class EfficiencyCurve {
      * Formulas:
      * - Discharge efficiency: η = 1 - 6.56275e-6 × P_watt
      * - Charge efficiency: η = 0.94347 - 7.73e-7×P - 6.32e-11×P² - 3.98e-14×P³
-     * - Battery RTE: η = 1 - 0.15 × C (C = C-rate = kW/kWh)
+     * - Battery RTE: η = 100 + k·(C_ch + C_dis) met k = -10.7834
+     *   waarbij C_ch en C_dis de C-rates zijn van het laden resp het ontladen
      *
      * Combined efficiency:
      * - Total = Inverter × √(Battery_RTE)
@@ -47,12 +48,16 @@ class EfficiencyCurve {
 
         /**
          * Battery round-trip efficiency
-         * @param {number} cRate - C-rate (kW / kWh)
+         * Formula: η = 100 + k·(C_ch + C_dis) met k = -10.7834
+         * @param {number} capacityKwh - Battery capacity in kWh
          * @returns {number} Round-trip efficiency (0-1)
          */
-        batteryRTE: (cRate) => {
-            const rte = 1 - 0.15 * cRate;
-            return Math.max(0.5, rte); // Minimum 50%
+        batteryRTE: function(capacityKwh) {
+            const cRateCharge = this.maxChargePowerKw / capacityKwh;
+            const cRateDischarge = this.maxDischargePowerKw / capacityKwh;
+            const k = -10.7834;
+            const rte = (100 + k * (cRateCharge + cRateDischarge)) / 100;
+            return Math.max(0.5, Math.min(0.999, rte)); // Between 50% and 99.9%
         },
 
         /**
@@ -62,11 +67,11 @@ class EfficiencyCurve {
          * @returns {Object} Efficiency breakdown
          */
         getCombinedEfficiency: function(powerKw, capacityKwh) {
-            // Calculate C-rate
+            // Calculate C-rate for display purposes
             const cRate = powerKw / capacityKwh;
 
-            // Battery efficiency (split RTE into single direction)
-            const battRTE = this.batteryRTE(cRate);
+            // Battery efficiency (based on max charge/discharge C-rates)
+            const battRTE = this.batteryRTE(capacityKwh);
             const battSingle = Math.sqrt(battRTE);
 
             // Inverter efficiency (input must be in Watt!)
@@ -92,7 +97,8 @@ class EfficiencyCurve {
      * Formulas:
      * - Discharge efficiency: η = 1 - 1.96883e-5 × P_watt
      * - Charge efficiency: η = 0.94347 - 2.32e-6×P - 5.69e-10×P² - 1.08e-12×P³
-     * - Battery RTE: η = 1 - 0.15 × C (C = C-rate = kW/kWh)
+     * - Battery RTE: η = 100 + k·(C_ch + C_dis) met k = -10.7834
+     *   waarbij C_ch en C_dis de C-rates zijn van het laden resp het ontladen
      *
      * Combined efficiency:
      * - Total = Inverter × √(Battery_RTE)
@@ -130,12 +136,16 @@ class EfficiencyCurve {
 
         /**
          * Battery round-trip efficiency
-         * @param {number} cRate - C-rate (kW / kWh)
+         * Formula: η = 100 + k·(C_ch + C_dis) met k = -10.7834
+         * @param {number} capacityKwh - Battery capacity in kWh
          * @returns {number} Round-trip efficiency (0-1)
          */
-        batteryRTE: (cRate) => {
-            const rte = 1 - 0.15 * cRate;
-            return Math.max(0.5, rte); // Minimum 50%
+        batteryRTE: function(capacityKwh) {
+            const cRateCharge = this.maxChargePowerKw / capacityKwh;
+            const cRateDischarge = this.maxDischargePowerKw / capacityKwh;
+            const k = -10.7834;
+            const rte = (100 + k * (cRateCharge + cRateDischarge)) / 100;
+            return Math.max(0.5, Math.min(0.999, rte)); // Between 50% and 99.9%
         },
 
         /**
@@ -145,11 +155,11 @@ class EfficiencyCurve {
          * @returns {Object} Efficiency breakdown
          */
         getCombinedEfficiency: function(powerKw, capacityKwh) {
-            // Calculate C-rate
+            // Calculate C-rate for display purposes
             const cRate = powerKw / capacityKwh;
 
-            // Battery efficiency (split RTE into single direction)
-            const battRTE = this.batteryRTE(cRate);
+            // Battery efficiency (based on max charge/discharge C-rates)
+            const battRTE = this.batteryRTE(capacityKwh);
             const battSingle = Math.sqrt(battRTE);
 
             // Inverter efficiency (input must be in Watt!)
