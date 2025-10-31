@@ -7,8 +7,8 @@ class EfficiencyCurve {
      * Victron MultiPlus 5000 (3-phase) preset
      *
      * Formulas:
-     * - Discharge efficiency: η = 1 - 6.56275e-6 × P_watt
-     * - Charge efficiency: η = 0.94347 - 7.73e-7×P - 6.32e-11×P² - 3.98e-14×P³
+     * - Discharge efficiency: η = 96.3731 - 0.000182296×P (P in DC Watt)
+     * - Charge efficiency: η = 96.3516 - 0.000808006×P (P in DC Watt)
      * - Battery RTE: η = 100 + k·(C_ch + C_dis) met k = -10.7834
      *   waarbij C_ch en C_dis de C-rates zijn van het laden resp het ontladen
      *
@@ -26,23 +26,26 @@ class EfficiencyCurve {
 
         /**
          * Inverter charge efficiency
-         * @param {number} powerWatt - DC power in Watt
+         * η = 96.3516 - 0.000808006×P
+         * @param {number} powerWatt - DC power in Watt (positive)
          * @returns {number} Efficiency (0-1)
          */
         chargeEffInv: (powerWatt) => {
-            const p = powerWatt;
-            const eff = 0.94347 - 7.73e-7*p - 6.32e-11*p*p - 3.98e-14*p*p*p;
+            const effPct = 96.3516 - 0.000808006 * powerWatt;
+            const eff = effPct / 100;
             // Cap efficiency between 50% and 99.9%
             return Math.min(0.999, Math.max(0.5, eff));
         },
 
         /**
          * Inverter discharge efficiency
-         * @param {number} powerWatt - DC power in Watt
+         * η = 96.3731 - 0.000182296×P
+         * @param {number} powerWatt - DC power in Watt (positive)
          * @returns {number} Efficiency (0-1)
          */
         dischargeEffInv: (powerWatt) => {
-            const eff = 1 - 6.56275e-6 * powerWatt;
+            const effPct = 96.3731 - 0.000182296 * powerWatt;
+            const eff = effPct / 100;
             return Math.min(0.999, Math.max(0.5, eff));
         },
 
@@ -94,9 +97,9 @@ class EfficiencyCurve {
     /**
      * Victron MultiPlus 5000 (1-phase) preset
      *
-     * Formulas:
-     * - Discharge efficiency: η = 1 - 1.96883e-5 × P_watt
-     * - Charge efficiency: η = 0.94347 - 2.32e-6×P - 5.69e-10×P² - 1.08e-12×P³
+     * Formulas (coëfficiënten 3× die van 3-fase):
+     * - Discharge efficiency: η = 96.3731 - 0.000546888×P (P in DC Watt)
+     * - Charge efficiency: η = 96.3516 - 0.002424018×P (P in DC Watt)
      * - Battery RTE: η = 100 + k·(C_ch + C_dis) met k = -10.7834
      *   waarbij C_ch en C_dis de C-rates zijn van het laden resp het ontladen
      *
@@ -114,23 +117,26 @@ class EfficiencyCurve {
 
         /**
          * Inverter charge efficiency
-         * @param {number} powerWatt - DC power in Watt
+         * η = 96.3516 - 0.002424018×P (coëfficiënt 3× die van 3-fase)
+         * @param {number} powerWatt - DC power in Watt (positive)
          * @returns {number} Efficiency (0-1)
          */
         chargeEffInv: (powerWatt) => {
-            const p = powerWatt;
-            const eff = 0.94347 - 2.32e-6*p - 5.69e-10*p*p - 1.08e-12*p*p*p;
+            const effPct = 96.3516 - 0.002424018 * powerWatt;
+            const eff = effPct / 100;
             // Cap efficiency between 50% and 99.9%
             return Math.min(0.999, Math.max(0.5, eff));
         },
 
         /**
          * Inverter discharge efficiency
-         * @param {number} powerWatt - DC power in Watt
+         * η = 96.3731 - 0.000546888×P (coëfficiënt 3× die van 3-fase)
+         * @param {number} powerWatt - DC power in Watt (positive)
          * @returns {number} Efficiency (0-1)
          */
         dischargeEffInv: (powerWatt) => {
-            const eff = 1 - 1.96883e-5 * powerWatt;
+            const effPct = 96.3731 - 0.000546888 * powerWatt;
+            const eff = effPct / 100;
             return Math.min(0.999, Math.max(0.5, eff));
         },
 
