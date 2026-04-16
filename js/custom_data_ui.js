@@ -123,7 +123,7 @@ function displayDataPreview(data) {
     const formatTypes = {
         'simple': 'Simpel (Import/Export/Opwek)',
         'p1': 'P1 (cumulatieve meterstanden)',
-        'xlsx': 'Energieleverancier (XLSX)'
+        'xlsx': 'Slimmemeterportal (XLSX)'
     };
     const formatType = formatTypes[data.detectedFormat] || data.detectedFormat;
 
