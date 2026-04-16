@@ -10,6 +10,7 @@ let currentMonthlySummaries = null;  // For drill-down navigation
 let costsChart = null;
 let gridFlowsChart = null;
 let timestepChart = null;  // For drill-down timestep chart
+let scanChart = null;  // For capacity scan chart
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,6 +37,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 customInputs.style.display = 'none';
             }
         });
+    });
+
+    // Show/hide single battery config when capacity scan is toggled
+    const capacityScanCheckbox = document.getElementById('capacityScan');
+    const singleBatteryConfig = document.getElementById('singleBatteryConfig');
+
+    capacityScanCheckbox.addEventListener('change', () => {
+        singleBatteryConfig.style.display = capacityScanCheckbox.checked ? 'none' : '';
+        // Remove required from hidden fields so form can submit
+        const fields = singleBatteryConfig.querySelectorAll('input');
+        fields.forEach(f => f.required = !capacityScanCheckbox.checked);
     });
 });
 
@@ -201,6 +213,12 @@ async function handleFormSubmit(e) {
     const form = e.target;
     const formData = new FormData(form);
 
+    // Check if capacity scan mode is enabled
+    const capacityScan = document.getElementById('capacityScan').checked;
+    if (capacityScan) {
+        return handleCapacityScan(form, formData);
+    }
+
     // Get form values
     const capacity = parseFloat(formData.get('capacity'));
     const initialSoc = parseFloat(formData.get('initialSoc'));
@@ -347,6 +365,228 @@ async function handleFormSubmit(e) {
         // Re-enable form
         submitButton.disabled = false;
     }
+}
+
+/**
+ * Handle capacity scan: run simulation for multiple battery sizes
+ */
+async function handleCapacityScan(form, formData) {
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+
+    const progressContainer = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    progressContainer.style.display = 'block';
+
+    // Common battery parameters
+    const chargeEff = parseFloat(formData.get('chargeEff')) / 100;
+    const dischargeEff = parseFloat(formData.get('dischargeEff')) / 100;
+    const initialSoc = parseFloat(formData.get('initialSoc'));
+    const minSoc = parseFloat(formData.get('minSoc'));
+    const maxSoc = parseFloat(formData.get('maxSoc'));
+    const priceMode = formData.get('priceMode');
+
+    const capacities = [2, 4, 8, 16, 32, 64];
+
+    try {
+        // Load price data (same as single simulation)
+        progressText.textContent = 'Prijsdata laden...';
+        progressBar.style.width = '5%';
+
+        const years = parsedData.years;
+        let pricesData = await loadPriceDataForYears(years);
+
+        const p1Interval = parsedData.detectedInterval;
+        const priceInterval = detectFinestPriceInterval(pricesData);
+
+        let simulationInterval;
+        let aggregatedData;
+
+        if (p1Interval >= priceInterval) {
+            simulationInterval = p1Interval;
+            if (p1Interval > priceInterval) {
+                pricesData = aggregatePricesToInterval(pricesData, p1Interval);
+            }
+            aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, p1Interval);
+        } else {
+            simulationInterval = priceInterval;
+            aggregatedData = parsedData.parser.aggregateToInterval(parsedData.deltaData, priceInterval);
+        }
+
+        parsedData.parser.calculateStats();
+        const formattedData = parsedData.parser.formatForSimulator(aggregatedData);
+        const trimmedData = trimToAvailablePrices(formattedData, pricesData);
+
+        const priceConfig = buildPriceConfig(priceMode, formData);
+        const fixedBuyPrice = parseFloat(formData.get('fixedBuyPrice'));
+        const fixedSellPrice = parseFloat(formData.get('fixedSellPrice'));
+        const fixedPriceConfig = { buy: fixedBuyPrice, sell: fixedSellPrice };
+
+        // Run baseline once (no battery, fixed contract)
+        progressText.textContent = 'Referentie berekenen (geen batterij)...';
+        progressBar.style.width = '10%';
+
+        const baselineSimulator = new CustomDataSimulator(
+            { capacityKwh: 2, chargePowerKw: 0.5, dischargePowerKw: 0.5,
+              chargeEfficiency: chargeEff, dischargeEfficiency: dischargeEff,
+              minSocPct: minSoc / 100, maxSocPct: maxSoc / 100, initialSocPct: initialSoc / 100 },
+            priceConfig, fixedPriceConfig, trimmedData.data, pricesData, simulationInterval
+        );
+        const fixedNoBattery = await baselineSimulator.simulateFixedContract();
+
+        // Run simulation for each capacity
+        const scanResults = [];
+
+        for (let i = 0; i < capacities.length; i++) {
+            const cap = capacities[i];
+            const power = cap * 0.25;  // 0.25C
+
+            const pct = 15 + (i / capacities.length) * 80;
+            progressText.textContent = `Simulatie ${cap} kWh / ${power.toFixed(1)} kW (${i + 1}/${capacities.length})...`;
+            progressBar.style.width = pct + '%';
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            const batteryConfig = {
+                capacityKwh: cap,
+                chargePowerKw: power,
+                dischargePowerKw: power,
+                chargeEfficiency: chargeEff,
+                dischargeEfficiency: dischargeEff,
+                minSocPct: minSoc / 100,
+                maxSocPct: maxSoc / 100,
+                initialSocPct: initialSoc / 100
+            };
+
+            const simulator = new CustomDataSimulator(
+                batteryConfig, priceConfig, fixedPriceConfig,
+                trimmedData.data, pricesData, simulationInterval
+            );
+
+            const results = await simulator.simulateAll((progress, message) => {
+                const subPct = pct + (progress / 100) * (80 / capacities.length);
+                progressBar.style.width = subPct + '%';
+                progressText.textContent = `${cap} kWh: ${message}`;
+            });
+
+            const totalSavings = fixedNoBattery.totalCost - results.dynamicWithBattery.totalCost;
+            const cycles = results.dynamicWithBattery.cycles;
+
+            scanResults.push({
+                capacity: cap,
+                power: power,
+                fixedNoBatteryCost: fixedNoBattery.totalCost,
+                dynamicWithBatteryCost: results.dynamicWithBattery.totalCost,
+                savings: totalSavings,
+                cycles: cycles,
+                savingsPerCycle: cycles > 0 ? totalSavings / cycles : 0
+            });
+        }
+
+        progressContainer.style.display = 'none';
+
+        // Hide single simulation results, show scan results
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('detailView').style.display = 'none';
+        displayScanResults(scanResults);
+
+    } catch (error) {
+        console.error('Capaciteitsscan fout:', error);
+        alert('Fout bij capaciteitsscan: ' + error.message);
+        progressContainer.style.display = 'none';
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+/**
+ * Display capacity scan results
+ */
+function displayScanResults(scanResults) {
+    const section = document.getElementById('scanResults');
+    section.style.display = 'block';
+
+    // Fill table
+    const tbody = document.getElementById('scanTableBody');
+    tbody.innerHTML = '';
+
+    for (const r of scanResults) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${r.capacity} kWh</td>
+            <td>${r.power.toFixed(1)} kW</td>
+            <td>€${r.fixedNoBatteryCost.toFixed(2)}</td>
+            <td>€${r.dynamicWithBatteryCost.toFixed(2)}</td>
+            <td class="profit-positive">€${r.savings.toFixed(2)}</td>
+            <td>${r.cycles.toFixed(1)}</td>
+            <td>€${r.savingsPerCycle.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    // Create chart
+    if (scanChart) scanChart.destroy();
+
+    const ctx = document.getElementById('scanChart').getContext('2d');
+    scanChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: scanResults.map(r => `${r.capacity} kWh`),
+            datasets: [
+                {
+                    label: 'Totale besparing (€)',
+                    data: scanResults.map(r => r.savings),
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'ySavings'
+                },
+                {
+                    label: 'Besparing per cyclus (€)',
+                    data: scanResults.map(r => r.savingsPerCycle),
+                    type: 'line',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    yAxisID: 'yPerCycle',
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': €' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                ySavings: {
+                    type: 'linear',
+                    position: 'left',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Totale besparing (€)' },
+                    ticks: { callback: v => '€' + v.toFixed(0) }
+                },
+                yPerCycle: {
+                    type: 'linear',
+                    position: 'right',
+                    beginAtZero: true,
+                    title: { display: true, text: 'Per cyclus (€)' },
+                    grid: { drawOnChartArea: false },
+                    ticks: { callback: v => '€' + v.toFixed(2) }
+                }
+            }
+        }
+    });
+
+    section.scrollIntoView({ behavior: 'smooth' });
 }
 
 /**
@@ -648,6 +888,7 @@ function calculatePriceStatistics(dynNoBat, dynWithBat) {
  * Display simulation results
  */
 function displayResults(results, monthlySummaries) {
+    document.getElementById('scanResults').style.display = 'none';
     const resultsSection = document.getElementById('results');
     resultsSection.style.display = 'block';
 

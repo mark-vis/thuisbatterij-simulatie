@@ -55,22 +55,31 @@
 
                 <div class="form-section">
                     <h3>Batterijconfiguratie</h3>
-                    <div class="form-group-inline">
-                        <label for="capacity">Capaciteit (kWh):</label>
-                        <input type="number" id="capacity" name="capacity" min="1" max="200" step="0.1" value="32" required>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="capacityScan" name="capacityScan">
+                            Capaciteitsscan (2–64 kWh, vermogen 0,25C)
+                        </label>
                     </div>
-                    <div class="form-group-inline">
-                        <label for="initialSoc">Initiële SoC (%):</label>
-                        <input type="number" id="initialSoc" name="initialSoc" min="0" max="100" step="1" value="50" required>
+
+                    <div id="singleBatteryConfig">
+                        <div class="form-group-inline">
+                            <label for="capacity">Capaciteit (kWh):</label>
+                            <input type="number" id="capacity" name="capacity" min="1" max="200" step="0.1" value="32" required>
+                        </div>
+                        <div class="form-group-inline">
+                            <label for="chargePower">Laadvermogen DC (kW):</label>
+                            <input type="number" id="chargePower" name="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                        </div>
+                        <div class="form-group-inline">
+                            <label for="dischargePower">Ontlaadvermogen DC (kW):</label>
+                            <input type="number" id="dischargePower" name="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                        </div>
                     </div>
 
                     <div class="form-group-inline">
-                        <label for="chargePower">Laadvermogen DC (kW):</label>
-                        <input type="number" id="chargePower" name="chargePower" min="0.1" max="50" step="0.1" value="8.0" required>
-                    </div>
-                    <div class="form-group-inline">
-                        <label for="dischargePower">Ontlaadvermogen DC (kW):</label>
-                        <input type="number" id="dischargePower" name="dischargePower" min="0.1" max="50" step="0.1" value="8.0" required>
+                        <label for="initialSoc">Initiële SoC (%):</label>
+                        <input type="number" id="initialSoc" name="initialSoc" min="0" max="100" step="1" value="50" required>
                     </div>
 
                     <div class="form-group-inline">
@@ -280,6 +289,38 @@
                         </tr>
                     </thead>
                     <tbody id="monthlyTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Capacity scan results (hidden by default) -->
+        <section id="scanResults" class="results-section" style="display: none;">
+            <h2>Capaciteitsscan Resultaten</h2>
+
+            <div class="charts-container">
+                <div class="chart-box full-width">
+                    <h3>Besparing per Batterijgrootte</h3>
+                    <div style="height: 400px;">
+                        <canvas id="scanChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="scanTable">
+                    <thead>
+                        <tr>
+                            <th>Capaciteit</th>
+                            <th>Vermogen</th>
+                            <th>Vast zonder bat.</th>
+                            <th>Dyn. + bat.</th>
+                            <th>Besparing</th>
+                            <th>Cycli</th>
+                            <th>€/cyclus</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanTableBody">
                     </tbody>
                 </table>
             </div>
