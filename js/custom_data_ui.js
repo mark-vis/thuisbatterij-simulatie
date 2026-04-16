@@ -52,13 +52,22 @@ async function handleFileUpload(e) {
     const preview = document.getElementById('dataPreview');
 
     try {
-        // Read file
-        const csvString = await file.text();
-
-        // Parse CSV and calculate deltas, but don't aggregate yet
-        // We'll aggregate after loading price data to match its interval
+        // Parse file based on extension
         const parser = new P1Parser();
-        const rawData = parser.parseCSV(csvString);
+        let rawData;
+
+        if (file.name.toLowerCase().endsWith('.xlsx')) {
+            // XLSX: read as ArrayBuffer and parse
+            const arrayBuffer = await file.arrayBuffer();
+            rawData = parser.parseXLSX(arrayBuffer);
+        } else {
+            // CSV: read as text and parse
+            const csvString = await file.text();
+            rawData = parser.parseCSV(csvString);
+        }
+
+        // Calculate deltas, but don't aggregate yet
+        // We'll aggregate after loading price data to match its interval
         const interval = parser.detectInterval(rawData);
         const deltaData = parser.calculateDeltas(rawData);
 
@@ -111,7 +120,12 @@ async function handleFileUpload(e) {
  */
 function displayDataPreview(data) {
     const stats = data.stats;
-    const formatType = data.detectedFormat === 'simple' ? 'Simpel (Import/Export/Opwek)' : 'P1 (cumulatieve meterstanden)';
+    const formatTypes = {
+        'simple': 'Simpel (Import/Export/Opwek)',
+        'p1': 'P1 (cumulatieve meterstanden)',
+        'xlsx': 'Energieleverancier (XLSX)'
+    };
+    const formatType = formatTypes[data.detectedFormat] || data.detectedFormat;
 
     // Display year(s)
     const firstYear = parsedData.firstTimestamp.getFullYear();

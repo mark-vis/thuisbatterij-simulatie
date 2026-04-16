@@ -462,6 +462,106 @@ class P1Parser {
     }
 
     /**
+     * Parse XLSX file (ArrayBuffer) - energy provider export format
+     * Supports format: datum_tijd; levering_normaal; levering_laag; teruglevering_normaal; teruglevering_laag; [buitentemperatuur]
+     */
+    parseXLSX(arrayBuffer) {
+        if (typeof XLSX === 'undefined') {
+            throw new Error('XLSX bibliotheek niet geladen');
+        }
+
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+
+        // Get raw data as array of arrays (no header transform)
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+        if (rows.length < 2) {
+            throw new Error('XLSX bestand is te kort (minimaal header + 1 data rij nodig)');
+        }
+
+        // Validate header
+        const header = rows[0].map(h => (h || '').toString().toLowerCase().trim());
+        if (!header.some(h => h.includes('datum_tijd')) ||
+            !header.some(h => h.includes('levering'))) {
+            throw new Error('Onbekend XLSX format. Verwacht kolommen: datum_tijd, levering_normaal, levering_laag, teruglevering_normaal, teruglevering_laag');
+        }
+
+        this.detectedFormat = 'xlsx';
+
+        // Find column indices
+        const colIdx = {
+            timestamp: header.findIndex(h => h.includes('datum_tijd')),
+            leveringNormaal: header.findIndex(h => h === 'levering_normaal'),
+            leveringLaag: header.findIndex(h => h === 'levering_laag'),
+            terugleveringNormaal: header.findIndex(h => h === 'teruglevering_normaal'),
+            terugleveringLaag: header.findIndex(h => h === 'teruglevering_laag')
+        };
+
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || !row[colIdx.timestamp]) continue;
+
+            try {
+                const timestamp = this.parseXLSXTimestamp(row[colIdx.timestamp]);
+                if (isNaN(timestamp.getTime())) continue;
+
+                // Parse values - None/null means 0, Dutch decimal comma
+                const leveringNormaal = this.parseXLSXValue(row[colIdx.leveringNormaal]);
+                const leveringLaag = this.parseXLSXValue(row[colIdx.leveringLaag]);
+                const terugleveringNormaal = this.parseXLSXValue(row[colIdx.terugleveringNormaal]);
+                const terugleveringLaag = this.parseXLSXValue(row[colIdx.terugleveringLaag]);
+
+                // Total import = normaal + laag (one is typically 0/null per row)
+                const importDelta = leveringNormaal + leveringLaag;
+                const exportDelta = terugleveringNormaal + terugleveringLaag;
+
+                data.push({
+                    timestamp,
+                    importDelta,
+                    exportDelta,
+                    pvGeneration: 0,
+                    isSimpleFormat: true  // Already delta values, skip delta calculation
+                });
+            } catch (err) {
+                console.warn(`XLSX regel ${i + 1}: ${err.message}`);
+            }
+        }
+
+        if (data.length === 0) {
+            throw new Error('Geen geldige data gevonden in XLSX');
+        }
+
+        this.rawData = data;
+        return data;
+    }
+
+    /**
+     * Parse XLSX timestamp: "01-01-2025 00:15:00 +0100" or similar
+     */
+    parseXLSXTimestamp(value) {
+        if (value instanceof Date) return value;
+
+        const str = value.toString().trim();
+
+        // Format: "dd-MM-yyyy HH:mm:ss +0100"
+        // Strip timezone offset and parse as local time
+        const withoutTz = str.replace(/\s*[+-]\d{4}$/, '');
+        return this.parseDutchDate(withoutTz);
+    }
+
+    /**
+     * Parse XLSX cell value - handles null, Dutch decimals, dash
+     */
+    parseXLSXValue(value) {
+        if (value === null || value === undefined || value === '' || value === '-') return 0;
+        if (typeof value === 'number') return value;
+        return this.parseDutchDecimal(value.toString());
+    }
+
+    /**
      * Main entry point: parse CSV and aggregate to hourly
      */
     async parseAndAggregate(csvString) {

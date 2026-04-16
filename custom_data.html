@@ -37,10 +37,11 @@
                     <h3>P1 Data Upload</h3>
                     <div class="form-group">
                         <label for="p1File">Selecteer CSV bestand:</label>
-                        <input type="file" id="p1File" name="p1File" accept=".csv" required>
+                        <input type="file" id="p1File" name="p1File" accept=".csv,.xlsx" required>
                         <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
-                            <strong>P1 format:</strong> time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh<br>
-                            <strong>Simpel format:</strong> DatumTijd;Import;Export;Opwek (Nederlandse decimalen)<br>
+                            <strong>P1 format (CSV):</strong> time, Import T1 kWh, Import T2 kWh, Export T1 kWh, Export T2 kWh<br>
+                            <strong>Simpel format (CSV):</strong> DatumTijd;Import;Export;Opwek (Nederlandse decimalen)<br>
+                            <strong>Energieleverancier (XLSX):</strong> datum_tijd, levering_normaal/laag, teruglevering_normaal/laag<br>
                             Tijdsintervallen en format worden automatisch gedetecteerd
                         </small>
                     </div>
@@ -339,6 +340,8 @@
     </footer>
 
     <!-- Load JavaScript modules -->
+    <!-- SheetJS for XLSX parsing -->
+    <script src="js/lib/xlsx.full.min.js"></script>
     <!-- HiGHS MILP Solver -->
     <script src="js/lib/highs.js"></script>
 
